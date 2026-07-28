@@ -1,0 +1,13 @@
+# Whitelist approach: ignore everything, then explicitly allow tracked packages.
+# To add another DK mod later, add a line like: !/DKBots/
+/*
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/ZedternalRBPerkpackage/
+
+# Junk inside tracked packages
+*.tmp
+desktop.ini
+Thumbs.db
+_OOB_Backup_*/

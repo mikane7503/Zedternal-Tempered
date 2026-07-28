@@ -1,0 +1,14 @@
+class DKWeap_Pistol_DualG18_Reforged extends KFWeap_Pistol_DualG18;
+
+defaultproperties
+{
+	InstantHitDamage(ALTFIRE_FIREMODE)=88
+	InstantHitDamage(BASH_FIREMODE)=60
+	InstantHitDamage(DEFAULT_FIREMODE)=88
+	MagazineCapacity(0)=231
+	SpareAmmoCapacity(0)=1132
+	AmmoPickupScale(0)=0.5
+	WeaponProjectiles(ALTFIRE_FIREMODE)=class'ZedternalRBPerkpackage.DKProj_Bullet_G18c_Reforged'
+	WeaponProjectiles(DEFAULT_FIREMODE)=class'ZedternalRBPerkpackage.DKProj_Bullet_G18c_Reforged'
+	SingleClass=class'ZedternalRBPerkpackage.DKWeap_Pistol_G18C_Reforged'
+}

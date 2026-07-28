@@ -1,0 +1,4 @@
+# Never convert line endings. UnrealScript sources are Tab + LF + ASCII and
+# must stay byte-identical. Localization files are UTF-16LE and must not be
+# touched by any text normalization.
+* -text
