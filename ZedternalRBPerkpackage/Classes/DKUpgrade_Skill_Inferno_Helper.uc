@@ -103,10 +103,13 @@ function SetTier(int InTier)
 {
 	Tier = Clamp(InTier, 1, 2);
 	
+	// Cooldown is config-driven:
+	// [ZedternalRBPerkpackage.DKUpgrade_Skill_Inferno] Cooldowns
+	// (index 0 = standard, 1 = deluxe)
 	if (Tier == 1)
-		Cooldown = 60.0f;
+		Cooldown = class'DKUpgrade_Skill_Inferno'.default.Cooldowns[0];
 	else
-		Cooldown = 45.0f;
+		Cooldown = class'DKUpgrade_Skill_Inferno'.default.Cooldowns[1];
 	
 	`log("Inferno_Helper: Tier" @ Tier @ "- Cooldown:" @ Cooldown);
 }
@@ -212,9 +215,12 @@ function Activate()
 	}
 	else
 	{
+		// Bonus percent is config-driven (FireDamageBonuses[1]); mechanic is
+		// implemented in DKUpgrade_Skill_Inferno.ModifyDamageGiven and lasts
+		// while the ability recharges.
 		class'DKMessageManager'.static.SendImportant(
 			DKPC,
-			"INFERNO (DELUXE) ACTIVATED! Set " $ IgnitedCount $ " enemies ablaze with +50% fire damage!"
+			"INFERNO (DELUXE) ACTIVATED! Set " $ IgnitedCount $ " enemies ablaze! +" $ int(class'DKUpgrade_Skill_Inferno'.default.FireDamageBonuses[1] * 100.0f) $ "% fire damage while recharging!"
 		);
 	}
 	

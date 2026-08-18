@@ -31,7 +31,6 @@ var config float HydeMeleeBonus;            // +melee fraction (3.0 = +300%)
 var config float HydeGunDamageMult;         // gun damage multiplier while Hyde (0.05 = -95%)
 var config float HydeAoERadius;             // shockwave radius (uu)
 var config float HydeAoEMinDamageFrac;      // damage fraction at the edge of the shockwave
-var config bool  bHydeFullImmune;           // true = take 0 damage while Hyde
 var config int   HydeChargesBase;           // serum charges per wave (pre-capstone-2)
 var config int   HydeChargesCapstone2;      // serum charges per wave at capstone 2
 var config float HydeFinalDamageTakenMult;  // Hyde: final incoming-damage multiplier (0.9 = take 10% less)
@@ -57,7 +56,6 @@ static function UpdateConfig()
         default.HydeGunDamageMult = 0.05f;   // -95%
         default.HydeAoERadius = 800.0f;      // ~10m (tune to taste)
         default.HydeAoEMinDamageFrac = 0.5f; // edge of the blast does 50%
-        default.bHydeFullImmune = False;     // deprecated: Hyde is no longer immune
         default.HydeFinalDamageTakenMult = 0.9f; // take 10% less final damage while Hyde
         default.HydeChargesBase = 1;
         default.HydeChargesCapstone2 = 2;
@@ -91,7 +89,6 @@ static function UpdateConfig()
         default.HydeMeleeBonus = 1.5f;
         default.HydeDuration = 10.0f;
         default.HydeChargesCapstone2 = 2;
-        default.bHydeFullImmune = False;
         default.HydeFinalDamageTakenMult = 0.9f;
 
         default.MODEVERSION = 3;

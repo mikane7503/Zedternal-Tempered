@@ -40,7 +40,10 @@ static function ModifyDamageGiven(out int InDamage, int DefaultDamage, int upgLe
 	
 	if (CurrentHealthPct <= default.HealthThreshold[upgLevel - 1])
 	{
-		InDamage = Round(float(InDamage) * (1.0f + default.DamageBoost[upgLevel - 1]));
+		// Additive on DefaultDamage per the WM modifier convention, instead of
+		// multiplying the accumulated value (which compounded with every other
+		// damage skill).
+		InDamage += Round(float(DefaultDamage) * default.DamageBoost[upgLevel - 1]);
 	}
 }
 
@@ -62,7 +65,10 @@ static simulated function GetReloadRateScale(out float InReloadRateScale, int up
 	// Apply reload speed boost if health is below threshold
 	if (CurrentHealthPct <= default.HealthThreshold[upgLevel - 1])
 	{
-		InReloadRateScale *= (1.0f + default.ReloadBoost[upgLevel - 1]);
+		// BUGFIX: InReloadRateScale is a TIME scale (smaller = faster). The
+		// old code multiplied it UP, making reloads SLOWER when hurt - the
+		// exact opposite of the skill. Composed harmonically like ZR.
+		InReloadRateScale = 1.0f / (1.0f / InReloadRateScale + default.ReloadBoost[upgLevel - 1]);
 	}
 }
 

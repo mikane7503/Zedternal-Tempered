@@ -15,7 +15,6 @@ var const float HealingDisplayDuration; // How long to show healing count after 
 var bool bHealingAuraActive;           // Whether healing aura is currently active
 var float LastAuraHealTime;            // Last time aura healing was applied
 var const float AuraHealInterval;      // How often aura healing ticks (1 second)
-var const float AllyProximityRange;    // Range to detect allies for bonuses
 
 // Sound events for feedback
 var const name ArchangelSoundRTPCName;
@@ -201,7 +200,9 @@ function ApplyHealingAura()
     local float HealingAmount;
     local bool bHealedSomeone;
     
-    HealingAmount = 1.0f; // 1 HP per second
+    // Config-driven: server owners tune this via
+    // [ZedternalRBPerkpackage.DKUpgrade_Perk_Archangel] Level10AuraHealing
+    HealingAmount = class'DKUpgrade_Perk_Archangel'.default.Level10AuraHealing;
     bHealedSomeone = false;
     
     // Heal all nearby allies
@@ -245,7 +246,7 @@ function UpdateNearbyAllies()
         if (AllyPawn != OwnerPawn && AllyPawn.Health > 0)
         {
             Distance = VSize(AllyPawn.Location - OwnerPawn.Location);
-            if (Distance <= AllyProximityRange)
+            if (Distance <= class'DKUpgrade_Perk_Archangel'.default.AllyProximityRange)
             {
                 NewRecord.AllyPawn = AllyPawn;
                 NewRecord.LastSeenTime = CurrentTime;
@@ -378,7 +379,6 @@ defaultproperties
     // Healing aura settings
     bHealingAuraActive=false
     AuraHealInterval=1.0f          // Heal every 1 second
-    AllyProximityRange=600.0f      // 6 meters in Unreal units
     
     // Ally tracking settings
     AllyTrackingInterval=0.5f      // Update ally list every 0.5 seconds

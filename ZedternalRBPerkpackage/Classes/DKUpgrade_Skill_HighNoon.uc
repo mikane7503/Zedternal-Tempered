@@ -20,6 +20,10 @@ static function UpdateConfig()
 static simulated function GetZedTimeModifier(out float InModifier, int upgLevel, KFWeapon KFW)
 {
 	local name StateName;
+
+	if (KFW == None)
+		return;
+
 	StateName = KFW.GetStateName();
 
 	if (class'ZedternalReborn.WMWeaponStates'.static.IsWeaponReloadState(StateName) || class'ZedternalReborn.WMWeaponStates'.static.IsWeaponSwitchState(StateName))

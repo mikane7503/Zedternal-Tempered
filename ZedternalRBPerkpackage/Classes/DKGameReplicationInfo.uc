@@ -407,6 +407,16 @@ var float EventWaveStartTime;            // WorldInfo.TimeSeconds when event sta
 var PlayerReplicationInfo EventWaveTargetPRI;  // Target player for VIP/HotPotato/Highlander/MarkedForDeath
 var byte EventSwapInterval;                    // Auto-swap period (s) for the HUD countdown; 0 = no countdown (VIP/none)
 
+// Minigame event extras (batch 27-32). Generic so multiple events can reuse:
+//   EventZoneLoc  - world location marker (Lava zone center / Golden zed / trophy drop)
+//   EventPhase    - small state machine (RLGL: 0=green 1=warn 2=red; Lava: 1=relocating;
+//                   Golden: 1=golden alive, 2=trophy on ground)
+//   EventDataA/B  - counters (Bounty: players done / players total)
+var vector EventZoneLoc;
+var byte EventPhase;
+var byte EventDataA;
+var byte EventDataB;
+
 replication
 {
     if (bNetDirty)
@@ -422,7 +432,8 @@ replication
         bAllowPerkReroll, PerkRerollBaseCost, PerkRerollMultiplier,
         MaxDifferentPerks, bProgressivePerkUnlock, CapstoneR1Level, CapstoneR2Level, CapstoneMaxR1, CapstoneMaxR2,
         bDeluxeUpgradeEnabled, DeluxeMinPerkLevel, DeluxeUpgradeCost, bDeluxeTargetedSelection,
-        ActiveEventWaveID, EventWaveTargetPRI, EventSwapInterval;
+        ActiveEventWaveID, EventWaveTargetPRI, EventSwapInterval,
+        EventZoneLoc, EventPhase, EventDataA, EventDataB;
 }
 
 // ===================================================================
@@ -1977,6 +1988,9 @@ defaultproperties
     ActiveEventWaveID=0
     EventWaveStartTime=0.0
     EventSwapInterval=0
+    EventPhase=0
+    EventDataA=0
+    EventDataB=0
 
     SlotDataChecksum=0
     bSlotDataVerified=False

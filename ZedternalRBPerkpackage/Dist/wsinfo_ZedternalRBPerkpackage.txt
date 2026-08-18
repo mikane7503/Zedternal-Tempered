@@ -1,0 +1,6 @@
+$Description "Perk Expansion Pack for Zedternal Reborn"
+$Title "Zedternal Unlimited"
+$PreviewFile "C:\Users\Anwender\Desktop\DukeZTRExt\Icons\11Features\ZULogo.jpg"
+$Tags "Mutator,Game Mode"
+$MicroTxItem "false"
+$PackageDirectory "C:\Users\Anwender\Documents\My Games\KillingFloor2\ZedternalRBPerkpackage"

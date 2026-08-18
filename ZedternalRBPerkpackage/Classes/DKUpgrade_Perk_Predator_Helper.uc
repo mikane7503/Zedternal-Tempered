@@ -1626,8 +1626,29 @@ function byte ClassifyZed(KFPawn_Monster P)
     if (InStr(ClassName, "Scrake") != -1) return CAT_SCRAKE;
     if (InStr(ClassName, "Fleshpound") != -1) return CAT_FLESHPOUND;
 
-    `log("[DK_PREDATOR] Unknown zed class:" @ ClassName);
-    return 255;
+    // DK FIX: name matching fails for injected custom zeds whose class names
+    // contain none of the vanilla keywords (Brute, Jumper, and other
+    // ZedInject community zeds). Fall back to class ANCESTRY - custom zeds
+    // virtually always extend a vanilla archetype, and IsA matches any
+    // subclass regardless of its name.
+    if (P.IsA('KFPawn_ZedCrawler')) return CAT_CRAWLER;
+    if (P.IsA('KFPawn_ZedStalker')) return CAT_STALKER;
+    if (P.IsA('KFPawn_ZedClot')) return CAT_CLOT;
+    if (P.IsA('KFPawn_ZedGorefast')) return CAT_GOREFAST;
+    if (P.IsA('KFPawn_ZedBloat')) return CAT_BLOAT;
+    if (P.IsA('KFPawn_ZedHusk')) return CAT_HUSK;
+    if (P.IsA('KFPawn_ZedSiren')) return CAT_SIREN;
+    if (P.IsA('KFPawn_ZedDAR')) return CAT_EDAR;
+    if (P.IsA('KFPawn_ZedScrake')) return CAT_SCRAKE;
+    if (P.IsA('KFPawn_ZedFleshpound')) return CAT_FLESHPOUND;
+
+    // Last resort for fully custom zeds extending only KFPawn_Monster:
+    // classify by size so they still count toward a trophy set instead of
+    // being dropped.
+    if (P.bLargeZed)
+        return CAT_SCRAKE;
+
+    return CAT_CLOT;
 }
 
 // ===================================================================

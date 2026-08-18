@@ -9,8 +9,7 @@ var const float KillDisplayDuration;   // How long to show kill count after last
 
 // Fury Mode state management (UPDATED: No infinite ammo, focus on damage + fire rate)
 var bool bInFuryMode;                  // Whether player is currently in fury mode
-var float FuryModeTimer;               // Remaining fury mode time
-var const float FuryModeDuration;      // Duration of fury mode
+var float FuryModeTimer;               // Remaining fury mode time (duration comes from DKUpgrade_Perk_Hydra config)
 var const name FuryModeTimerName;      // Timer name for fury mode
 
 // Sound events for feedback
@@ -123,7 +122,7 @@ function TrackKill(optional KFPawn_Monster KilledMonster)
                 if (KFPC != None)
                 {
                     // FIXED: Only send message once per fury mode activation
-                    KFPC.ClientMessage("HYDRA BARRAGE ACTIVATED! " $ int(FuryModeDuration) $ " seconds of +100% fire rate + triple damage! (" $ TotalKills $ " total kills)");
+                    KFPC.ClientMessage("HYDRA BARRAGE ACTIVATED! " $ int(class'DKUpgrade_Perk_Hydra'.default.FuryModeDuration) $ " seconds of +100% fire rate + triple damage! (" $ TotalKills $ " total kills)");
                 }
             }
         }
@@ -144,10 +143,10 @@ function StartFuryMode()
     local KFPlayerController KFPC;
     
     bInFuryMode = true;
-    FuryModeTimer = FuryModeDuration;
+    FuryModeTimer = class'DKUpgrade_Perk_Hydra'.default.FuryModeDuration;
     
     // Start the fury mode timer
-    SetTimer(FuryModeDuration, False, FuryModeTimerName);
+    SetTimer(class'DKUpgrade_Perk_Hydra'.default.FuryModeDuration, False, FuryModeTimerName);
     
     // Play fury mode start sound
     KFPC = KFPlayerController(GetALocalPlayerController());
@@ -198,7 +197,7 @@ function ShowFuryModeNotification()
         HydraHUD = class'DKHudWrapper'.static.GetReaperHUD(KFPC);
         if (HydraHUD != None)
         {
-            HydraHUD.TriggerChainNotification("HYDRA BARRAGE!", "8 seconds of double fire rate + triple damage!", 4.0f);
+            HydraHUD.TriggerChainNotification("HYDRA BARRAGE!", int(class'DKUpgrade_Perk_Hydra'.default.FuryModeDuration) $ " seconds of double fire rate + triple damage!", 4.0f);
         }
     }
 }
@@ -336,7 +335,6 @@ defaultproperties
     TotalKills=0
     MaxKillsToDisplay=75           // Track kills up to 75 for fury mode
     KillDisplayDuration=5.0f       // Show kill counter for 5 seconds after last kill
-    FuryModeDuration=8.0f          // 8 seconds of fury mode
     FuryModeTimerName=FuryModeEnd  // No quotes for name properties
     
     // Deduplication settings (MINIMAL: Only catches true duplicates within same frame/tick)

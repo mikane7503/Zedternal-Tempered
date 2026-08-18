@@ -1,0 +1,256 @@
+[img]http://localhost:8847/images/ZU_Workshop_Banner.png[/img]
+
+[hr][/hr]
+
+[h1]✦ Zedternal Unlimited — Perk Expansion Pack[/h1]
+[i]A massive expansion for Zedternal Reborn that transforms the endless mode into a deep, strategic roguelike experience.[/i]
+
+Zedternal Unlimited introduces [b]30+ brand-new custom perks[/b], each with unique gameplay mechanics that go far beyond simple stat bonuses. Every perk creates an entirely new playstyle with dedicated skill trees, milestone abilities, and custom HUD elements.
+
+[b]This is not just a perk pack — it's a complete gameplay expansion.[/b]
+
+[h2]What Makes This Different[/h2]
+[list]
+[*] [b]Every perk creates a new playstyle[/b] — not just damage bonuses, but entirely new mechanics
+[*] [b]Level 10 & 20 milestone abilities[/b] that transform how each perk plays
+[*] [b]Dedicated skill trees[/b] per perk with unique synergies
+[*] [b]Custom HUD elements[/b] for tracking perk-specific mechanics
+[*] [b]Full multiplayer support[/b] — works on dedicated servers and listen servers
+[/list]
+
+[hr][/hr]
+
+[h1]⚔ The Perks[/h1]
+Zedternal Unlimited features [b]30+ custom perks[/b] organized into themed groups, each with its own visual identity and gameplay philosophy.
+
+Every perk features:
+[list]
+[*] A [b]unique core mechanic[/b] that defines a new playstyle
+[*] [b]Level 10 milestone[/b] — unlocks a new mechanic that changes how you play
+[*] [b]Level 20 capstone[/b] — a game-changing ultimate power
+[*] [b]Dedicated skill tree[/b] with exclusive skills and synergies
+[*] [b]Custom HUD tracking[/b] for perk-specific stats and mechanics
+[/list]
+
+[i]Full perk details, themed trees, and skill breakdowns coming soon.[/i]
+
+[hr][/hr]
+
+[h1]✦ Key Features[/h1]
+
+[h2]🎲 Roguelike Upgrade System[/h2]
+Every wave brings new choices. Purchase perks, skills, weapons, and equipment upgrades from the trader between waves. Build your character differently every run with six rarity tiers influencing what's available.
+
+[h2]🧬 Evolution & Progression[/h2]
+Perks aren't static — they grow with you. Many perks feature dynamic mechanics that respond to your playstyle, rewarding commitment and adaptation.
+
+[h2]⚡ Milestone Abilities[/h2]
+Every perk has powerful transformative abilities at Level 10 and Level 20:
+[list]
+[*] Level 10 unlocks a [b]new mechanic[/b] that changes how you play
+[*] Level 20 provides a [b]capstone ability[/b] — a game-changing ultimate power
+[/list]
+
+[h2]🎯 Dedicated Skill Trees[/h2]
+Each perk comes with its own pool of exclusive skills, creating deep build variety and unique synergies per perk.
+
+[h2]🖥 Custom HUD & UI[/h2]
+Perk-specific HUD elements track your unique mechanics — evolution stage counters, dosh trackers, escalation indicators, and more. Everything is cleanly integrated into the existing KF2 interface.
+
+[h2]🎮 Full Multiplayer Support[/h2]
+[list]
+[*] Works on [b]dedicated servers[/b] and [b]listen servers[/b]
+[*] Proper client-server replication for all perk mechanics
+[*] All custom HUD elements replicated correctly
+[*] No desync issues — extensively tested
+[/list]
+
+[hr][/hr]
+
+[h1]📥 Installation[/h1]
+[olist]
+[*] Subscribe to this mod on the Steam Workshop
+[*] Subscribe to [b]Zedternal Reborn[/b] (required base mod) if you haven't already
+[*] Launch Killing Floor 2
+[*] The perk pack will be automatically loaded alongside Zedternal Reborn
+[*] If you are unfamiliar with .INI files and Server customization, my [url=https://zedternalunlimited.com/configurator]Zedternal Unlimited Website[/url] has an automatic INI Configurator with a user-friendly UI and export / import features so you get to play the Mod exactly how you want to experience it.
+[*] If you need any help, feel free to join the [url=https://discord.gg/ytdphknevy]Zedternal Unlimited Discord[/url]. I'm happy always to help!
+[/olist]
+
+[b]Requirements:[/b]
+[list]
+[*] [b]Killing Floor 2[/b] (latest version)
+[*] [b]Zedternal Reborn[/b] — you can find the mod [url=https://steamcommunity.com/workshop/filedetails/?id=2058869377]-> right here <-[/url]
+[/list]
+
+[b]Note:[/b] This is a perk expansion pack, not a standalone mod. It adds content to Zedternal Reborn's existing systems.
+
+[b]Recommendations:[/b]
+[list]
+[*] [b]Howdy Rowdy's Zedternal Reborn Expansion[/b] [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2516553756]-> Download here <-[/url]
+[*] [b]Psyk0tik's Zedternal Reborn Extension[/b] [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2889577909]-> Download here <-[/url]
+[*] [b]Tainted Hex's ZedternalExt[/b] [url=https://steamcommunity.com/sharedfiles/filedetails/?id=2044138941]-> Download here <-[/url]
+[/list]
+
+[b]The INI Configurator on the [url=https://zedternalunlimited.com/]Zedternal Unlimited Website[/url] natively supports all of the above additions to Zedternal Reborn so you're free to mix and match![/b]
+
+[hr][/hr]
+
+[h1]🖥 Dedicated Server Setup[/h1]
+
+[h2]Quick Setup[/h2]
+[olist]
+[*] Subscribe to both Zedternal Reborn and Zedternal Unlimited on the Workshop
+[*] Add both mods to your server's workshop subscription list
+[*] Launch your Server or Singleplayer Game with one of these launch commands [i](replace KF-SteamFortress with any map you like): [/i]
+
+[b]1. Default Zedternal Reborn Gamemode[/b] (random weapons appear in the trader every wave)
+
+[i]KF-SteamFortress?game=ZedternalRBPerkpackage.DKGameInfo_Endless?mutator=ZedternalRBPerkpackage.DKMutator[/i]
+
+[b]2. Zedternal Reborn with All Weapons available in the trader[/b]
+
+[i]KF-SteamFortress?game=ZedternalRBPerkpackage.DKGameInfo_Endless_AllWeapons?mutator=ZedternalRBPerkpackage.DKMutator[/i]
+[/olist]
+
+[h2]Server Configuration[/h2]
+All perks are fully configurable through [url=https://zedternalunlimited.com/configurator]Zedternal Reborn's configuration system[/url]. Server admins can:
+[list]
+[*] Enable or disable individual perks
+[*] Adjust perk availability per wave
+[*] Configure skill pools and restrictions
+[*] Use the Zedternal Configurator tool for easy setup
+[/list]
+
+[hr][/hr]
+
+[h1]❓ FAQ / Troubleshooting[/h1]
+
+[h2]Q: Do I need Zedternal Reborn installed?[/h2]
+[b]Yes.[/b] This is an expansion pack for Zedternal Reborn. It extends the base mod's systems and cannot function without it.
+
+[h2]Q: Will this break my existing Zedternal Reborn setup?[/h2]
+No. Zedternal Unlimited adds content alongside existing perks — it doesn't replace or modify any base Zedternal Reborn content. Your existing perks and configuration remain untouched.
+
+[h2]Q: Does this work on dedicated servers?[/h2]
+Yes! Full dedicated server support with proper client-server replication. All custom HUD elements and perk mechanics work correctly in multiplayer.
+
+[h2]Q: How do I unlock hidden perks?[/h2]
+Some perks have unlock conditions that require specific combinations of other perks or levels. Experiment and explore — that's part of the fun!
+
+[h2]Q: Can I configure which perks are available?[/h2]
+Absolutely. Server admins have full control over which perks appear in the trader, their wave availability, and associated skill pools.
+
+[h2]Q: Is this compatible with other Zedternal Reborn perk packs?[/h2]
+Yes! Zedternal Unlimited follows the same extension patterns as other perk packs and should be compatible.
+
+[h2]Q: I found a bug / have a suggestion[/h2]
+Please report bugs and share suggestions on our [url=https://discord.gg/ytdphknevy]Discord server[/url] or in the comments section below. Include steps to reproduce for bugs.
+
+[hr][/hr]
+
+[h1]🔗 Compatibility[/h1]
+
+[h2]✅ Required[/h2]
+[list]
+[*] [b]Zedternal Reborn[/b] — Base framework (required)
+[/list]
+
+[h2]✅ Compatible With[/h2]
+[list]
+[*] Other Zedternal Reborn perk packs
+[*] All standard KF2 maps
+[*] Custom maps
+[/list]
+
+[h2]❌ Not Compatible With[/h2]
+[list]
+[*] Mods that modify core KF2 pawn classes in conflicting ways
+[/list]
+
+[hr][/hr]
+
+[h1]🗺 Future Plans[/h1]
+
+[h2]Planned[/h2]
+[list]
+[*] Additional skill trees for existing perks
+[*] New perk concepts
+[*] Balance adjustments based on community feedback
+[*] Expanded configuration options
+[/list]
+
+[h2]Under Consideration[/h2]
+[list]
+[*] Additional custom zed variants
+[*] More special wave types
+[/list]
+
+[i]Got ideas? Share them on our Discord — community feedback drives development![/i]
+
+[hr][/hr]
+
+[h1]🏆 Credits & Acknowledgments[/h1]
+
+[h2]Development[/h2]
+[list]
+[*] [b]Duke[/b] — Creator & Lead Developer
+[/list]
+
+[h2]Special Thanks[/h2]
+[list]
+[*] The [b]Zedternal Reborn[/b] team, flagshipped by FleetKiller, for building the incredible framework that makes this possible
+[*] Rowdy Howdy for helping me getting started with KF2 modding
+[*] The KF2 modding community for knowledge sharing and support
+[*] All playtesters and early feedback contributors
+[*] Everyone on the Discord who helped shape these perks
+[/list]
+
+[h2]Built With[/h2]
+[list]
+[*] Killing Floor 2 SDK
+[*] UnrealScript
+[*] Zedternal Reborn Framework
+[/list]
+
+[hr][/hr]
+
+[h1]📬 Contact & Community[/h1]
+
+[b]Discord:[/b] [url=https://discord.gg/ytdphknevy]Join the Community Discord[/url]
+[b]Steam:[/b] Comment below or send me a message
+
+[h2]Bug Reports and Feature Requests[/h2]
+When reporting bugs or requesting features, please use my official [url=https://zedternalunlimited.com/bugs]Ticket System[/url]
+
+[hr][/hr]
+
+[h1]📜 Permissions & Licensing[/h1]
+
+This mod is released as [b]open source[/b].
+
+[h2]You May[/h2]
+[list]
+[*] Use this mod on any server — public or private
+[*] Learn from and reference the source code
+[*] Create derivative works with proper credit
+[/list]
+
+[h2]Please Don't[/h2]
+[list]
+[*] Re-upload this mod without explicit permission
+[*] Claim this work as your own
+[*] Remove credits or attribution
+[/list]
+
+[hr][/hr]
+
+[h1]📋 Changelog[/h1]
+
+[h2]v1.0.0 — 2026-02-25 (Unreleased)[/h2]
+Initial public release
+- 30+ custom perks across themed trees
+- Roguelike upgrade system with 6 rarity tiers
+- 40+ special wave types
+- Full dedicated server support
+- Custom HUD elements for all perk mechanics

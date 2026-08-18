@@ -371,8 +371,9 @@ function OnKillForBloodHarvest(KFPawn_Monster KilledMonster)
 	if (bHemorrhagePulseUsedThisWave)
 		return;
 	
-	// Only count kills when 3+ enemies are siphoned
-	if (SiphonedEnemies.Length < 3)
+	// Only count kills when enough enemies are siphoned. Config-driven:
+	// [ZedternalRBPerkpackage.DKUpgrade_Perk_Parasite] MinSiphonedForHarvest
+	if (SiphonedEnemies.Length < class'DKUpgrade_Perk_Parasite'.default.MinSiphonedForHarvest)
 		return;
 	
 	BloodHarvestProgress++;
@@ -464,21 +465,23 @@ function TriggerHemorrhagePulse()
 		}
 	}
 	
-	// CLEAR GUARD before the intentional heals below — these are direct
+	// CLEAR GUARD before the intentional heals below - these are direct
 	// one-shot heals, not life steal, and should NOT feed back into siphon
 	// damage. However we still keep the guard active during HealDamage
 	// because HealDamage -> HealingDamage -> DamageSiphonedEnemies would
 	// loop. So we clear AFTER the heals instead.
 	
-	// Heal self for 100% of damage dealt
-	SelfHeal = TotalDamage;
+	// Heal self for a configured fraction of damage dealt
+	// ([ZedternalRBPerkpackage.DKUpgrade_Perk_Parasite] HemorrhageHealPercent)
+	SelfHeal = Round(float(TotalDamage) * class'DKUpgrade_Perk_Parasite'.default.HemorrhageHealPercent);
 	if (SelfHeal > 0)
 	{
 		Player.HealDamage(SelfHeal, Player.Controller, class'KFDT_Healing');
 	}
 	
-	// Heal nearby teammates for 50% of damage dealt
-	TeamHeal = TotalDamage / 2;
+	// Heal nearby teammates for a configured fraction of damage dealt
+	// ([ZedternalRBPerkpackage.DKUpgrade_Perk_Parasite] HemorrhageTeamHealPercent)
+	TeamHeal = Round(float(TotalDamage) * class'DKUpgrade_Perk_Parasite'.default.HemorrhageTeamHealPercent);
 	if (TeamHeal > 0)
 	{
 		foreach Player.WorldInfo.AllPawns(class'KFPawn_Human', Teammate)

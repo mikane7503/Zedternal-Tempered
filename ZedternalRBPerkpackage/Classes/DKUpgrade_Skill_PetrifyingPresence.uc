@@ -2,7 +2,6 @@ class DKUpgrade_Skill_PetrifyingPresence extends DKUpgrade_Skill
 	config(ZedternalUnlimited);
 
 var config array<float> PetrifyChance;
-var config array<float> StumbleMultiplier;
 var config array<float> DamageMultiplier;
 var config int MODEVERSION;
 
@@ -12,8 +11,6 @@ static function UpdateConfig()
 	{
 		default.PetrifyChance[0] = 0.1f;
 		default.PetrifyChance[1] = 0.2f;
-		default.StumbleMultiplier[0] = 2.0f;
-		default.StumbleMultiplier[1] = 2.0f;
 		default.DamageMultiplier[0] = 0.0f;
 		default.DamageMultiplier[1] = 0.5f;
 
@@ -52,8 +49,11 @@ static function ModifyDamageGiven(out int InDamage, int DefaultDamage, int upgLe
         PetrifyHelper.PetrifyMonster(MyKFPM, upgLevel);
     }
     
-    // Apply bonus damage if monster is petrified
-    if (PetrifyHelper.IsMonsterPetrified(MyKFPM) && upgLevel == 2)
+    // Apply bonus damage if monster is petrified. Driven purely by the
+    // config value (DamageMultiplier defaults to 0.0 for standard tier, 0.5
+    // for deluxe) - the old hardcoded upgLevel == 2 gate made the standard
+    // tier ignore any admin-configured value.
+    if (default.DamageMultiplier[upgLevel - 1] > 0.0f && PetrifyHelper.IsMonsterPetrified(MyKFPM))
     {
         InDamage += Round(float(DefaultDamage) * default.DamageMultiplier[upgLevel - 1]);
     }

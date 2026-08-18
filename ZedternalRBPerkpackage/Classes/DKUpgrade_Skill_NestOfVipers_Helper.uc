@@ -44,11 +44,10 @@ function Timer()
     CurrentPosition = Player.Location;
     MovementDistance = VSize(CurrentPosition - LastPosition);
     
-    // Get trigger time based on upgrade level
-    if (UpgradeLevel == 1)
-        TriggerTime = 5.0f;
-    else
-        TriggerTime = 3.0f;
+    // Get trigger time from the skill config (INI section
+    // [ZedternalRBPerkpackage.DKUpgrade_Skill_NestOfVipers]). Previously
+    // hardcoded here, so the config value was ignored.
+    TriggerTime = class'DKUpgrade_Skill_NestOfVipers'.default.TriggerTime[Clamp(UpgradeLevel, 1, class'DKUpgrade_Skill_NestOfVipers'.default.TriggerTime.Length) - 1];
     
     // Check if player is moving
     if (MovementDistance > MovementThreshold)
@@ -163,17 +162,12 @@ function ApplyPoisonCloudDamage()
     KFPC = KFPlayerController(Player.Controller);
     if (KFPC == None) return;
     
-    // Get cloud parameters based on upgrade level
-    if (UpgradeLevel == 1)
-    {
-        CloudRange = 400.0f; // 4m
-        CloudDamage = 3;
-    }
-    else
-    {
-        CloudRange = 600.0f; // 6m
-        CloudDamage = 5;
-    }
+    // Get cloud parameters from the skill config (INI section
+    // [ZedternalRBPerkpackage.DKUpgrade_Skill_NestOfVipers]). Previously
+    // hardcoded here, so the config values were ignored.
+    i = Clamp(UpgradeLevel, 1, class'DKUpgrade_Skill_NestOfVipers'.default.CloudRange.Length) - 1;
+    CloudRange = class'DKUpgrade_Skill_NestOfVipers'.default.CloudRange[i];
+    CloudDamage = class'DKUpgrade_Skill_NestOfVipers'.default.CloudDamage[Clamp(UpgradeLevel, 1, class'DKUpgrade_Skill_NestOfVipers'.default.CloudDamage.Length) - 1];
     
     // Find all monsters within cloud range
     foreach Player.CollidingActors(class'KFPawn_Monster', NearbyMonster, CloudRange)

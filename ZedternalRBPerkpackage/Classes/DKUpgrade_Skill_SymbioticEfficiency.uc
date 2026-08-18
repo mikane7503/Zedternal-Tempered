@@ -23,12 +23,17 @@ static function UpdateConfig()
 
 static simulated function GetReloadRateScale(out float InReloadRateScale, int upgLevel, KFWeapon KFW, KFPawn OwnerPawn)
 {
-	InReloadRateScale *= (1.0f + default.ReloadBonus[upgLevel - 1]);
+	// BUGFIX: InReloadRateScale is a TIME scale (smaller = faster). The old
+	// code multiplied it UP, making reloads 25/40% SLOWER. Composed
+	// harmonically like ZR's own reload skills.
+	InReloadRateScale = 1.0f / (1.0f / InReloadRateScale + default.ReloadBonus[upgLevel - 1]);
 }
 
 static simulated function ModifyWeaponSwitchTime(out float InSwitchTime, float DefaultSwitchTime, int upgLevel, KFWeapon KFW)
 {
-	InSwitchTime = DefaultSwitchTime / (1.0f + default.SwitchSpeedBonus[upgLevel - 1]);
+	// BUGFIX: previously overwrote from DefaultSwitchTime, discarding every
+	// other switch speed contributor. Divide the incoming value instead.
+	InSwitchTime /= (1.0f + default.SwitchSpeedBonus[upgLevel - 1]);
 }
 
 defaultproperties
