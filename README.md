@@ -1,21 +1,27 @@
-# Zedternal Unlimited (ZU)
+﻿# Zedternal Unlimited (ZU)
 
 Server-side Killing Floor 2 mod extending ZedternalReborn and HowdyZTRExt.
 
 - Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3673337602
-- Package: `ZedternalRBPerkpackage`
+- Package: `ZedternalTempered`
+- Server URL: `Game=ZedternalTempered.ZTGameInfo_Endless?mutator=ZedternalTempered.DKMutator`
 - Language: UnrealScript (UE3)
 
 ## Repository layout
 
 This repo lives at `KFGame\Src\` of a KF2 SDK installation. Only the
-`ZedternalRBPerkpackage` folder is tracked (see `.gitignore` whitelist).
+`ZedternalTempered` folder is tracked (see `.gitignore` whitelist).
 Additional DK companion mods can be added to the whitelist later.
 
 ## Building
 
 Compile with the KF2 SDK (`KFEditor make`). Package order:
-HowdyZTRExt -> ZedternalReborn -> ZedternalRBPerkpackage.
+HowdyZTRExt -> ZedternalReborn -> ZedternalTempered.
+
+For the normal Tempered workflow, run `Build-Deploy-Tempered.bat` (or invoke
+`Build-Deploy-Tempered.ps1` with an execution-policy bypass). It stages the current source, performs a full build, and deploys
+the script, resource packages, Korean localization, and INI files to the
+configured server/client test paths. Every copied file is SHA-256 verified.
 
 ## Notes
 

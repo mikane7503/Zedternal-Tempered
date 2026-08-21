@@ -1,0 +1,6 @@
+class ZTProj_SonicBlastFullyCharged_HRG_SonicGun_Reforged extends KFProj_SonicBlastFullyCharged_HRG_SonicGun;
+
+defaultproperties
+{
+	Damage=14
+}

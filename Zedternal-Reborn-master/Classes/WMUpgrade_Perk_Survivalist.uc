@@ -1,0 +1,39 @@
+Class WMUpgrade_Perk_Survivalist extends WMUpgrade_Perk;
+
+var float Damage, SpareAmmo;
+
+static function ModifyDamageGivenPassive(out float damageFactor, int upgLevel)
+{
+	damageFactor += default.Damage * upgLevel;
+}
+
+static function ApplyWeightLimits(out int InWeightLimit, int DefaultWeightLimit, int upgLevel)
+{
+	InWeightLimit += upgLevel;
+}
+
+static simulated function ModifySpareAmmoAmountPassive(out float spareAmmoFactor, int upgLevel)
+{
+	spareAmmoFactor += default.SpareAmmo * upgLevel;
+}
+
+defaultproperties
+{
+	Damage=0.02f
+	SpareAmmo=0.1f
+
+	bShouldLocalize=True
+	UpgradeName="ZedternalReborn.WMUpgrade_Perk_Survivalist"
+	LocalizeDescriptionLineCount=3
+	PerkBonus(0)=(baseValue=0, incValue=1, maxValue=-1)
+	PerkBonus(1)=(baseValue=0, incValue=10, maxValue=-1)
+	PerkBonus(2)=(baseValue=0, incValue=2, maxValue=-1)
+	UpgradeIcon(0)=Texture2D'ZedternalReborn_Resource.Perks.UI_Perk_Survivalist_Rank_0'
+	UpgradeIcon(1)=Texture2D'ZedternalReborn_Resource.Perks.UI_Perk_Survivalist_Rank_1'
+	UpgradeIcon(2)=Texture2D'ZedternalReborn_Resource.Perks.UI_Perk_Survivalist_Rank_2'
+	UpgradeIcon(3)=Texture2D'ZedternalReborn_Resource.Perks.UI_Perk_Survivalist_Rank_3'
+	UpgradeIcon(4)=Texture2D'ZedternalReborn_Resource.Perks.UI_Perk_Survivalist_Rank_4'
+	UpgradeIcon(5)=Texture2D'ZedternalReborn_Resource.Perks.UI_Perk_Survivalist_Rank_5'
+
+	Name="Default__WMUpgrade_Perk_Survivalist"
+}

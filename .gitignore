@@ -1,13 +1,20 @@
-# Whitelist approach: ignore everything, then explicitly allow tracked packages.
-# To add another DK mod later, add a line like: !/DKBots/
-/*
-!/.gitignore
-!/.gitattributes
-!/README.md
-!/ZedternalRBPerkpackage/
-
-# Junk inside tracked packages
+# Source-first repository. Generated packages and deployed server files are not
+# source and must not be mixed into upstream merge history.
+/Tempered_Build/
+/UpstreamChangePackets/
+/*.upk
+/*.u
 *.tmp
+*.bak
+*.log
+*.ui-rollback
+__pycache__/
+*.py[cod]
 desktop.ini
 Thumbs.db
 _OOB_Backup_*/
+
+# These are large/generated art workspaces. Promote intentional source assets
+# through a separate Git LFS repository or a versioned release artifact.
+/ZedternalRBPerkpackage_Resources/
+/NewPerkIconSamples/

@@ -1,0 +1,121 @@
+// Auto-generated from the wrapper classes that physically exist in Tempered.
+class ZTConfig_WrapperLoader extends Object;
+
+static function LoadAllWrapperConfigs()
+{
+	class'ZedternalTempered.ZTWrapper_Equipment_ArmorUp'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Equipment_FallCompensatorBoots'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Equipment_HealthUp'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Equipment_SpareBatteries'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Perk_Berserker'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Perk_Commando'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Perk_Demolitionist'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Perk_FieldMedic'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Perk_Firebug'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Perk_Gunslinger'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Perk_Sharpshooter'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Perk_Support'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Perk_Survivalist'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Perk_SWAT'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_AcidicRounds'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_AmmoPickup'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_AmmoVest'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Assassin'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_AssaultArmor'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Barbecue'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Barrage'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_BattleSurgeon'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_BerserkerRage'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Bombardier'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_BoneBreaker'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Brawler'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_BringTheHeat'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Butcher'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_CallOut'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_CoagulantBooster'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_CombatantDoctor'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Combustion'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Concentration'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_ConcussionRounds'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Cripple'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_DeadEye'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_DestroyerOfWorlds'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_DoorTraps'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Dreadnaught'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Emergency'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Empathy'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_ExtraRounds'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Fallback'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_FireStorm'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_FirstBlood'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_FocusInjection'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Fortitude'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_FrontLine'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_FrozenHeadPopper'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Guerrilla'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_GunMachine'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_HeatWaves'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_HeavyArmor'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Hemoglobin'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_HighCapacityMags'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_HighCapacityMagsB'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_HighImpactRound'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Hunter'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_ImpactRounds'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Kamikaze'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_MadBomber'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_MagicBullet'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Marksman'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Massacre'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Napalm'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Overload'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Parry'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Penetrator'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Pressure'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Pyromaniac'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_QuickDraw'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_QuickFuse'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Ranger'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_RankThemUp'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_RapidAssault'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Resistance'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_RiotShield'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Ruthless'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Safeguard'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Salvo'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Scrapper'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_ShockTrooper'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_ShootAndRun'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Skirmisher'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Sniper'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_SonicResistantRounds'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Spartan'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_SpecialUnit'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Speedloader'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Stability'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Steady'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Strength'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Supplier'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_SuppressionRounds'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_SymbioticHealth'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_TacticalArmor'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_TacticalMovement'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_TacticalReload'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Tactician'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Tank'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Tempest'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Tenacity'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_TightChoke'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Vampire'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Velocity'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Watcher'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_WhirlwindOfLead'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_Zedatif'.static.UpdateConfig();
+	class'ZedternalTempered.ZTWrapper_Skill_ZedPlosion'.static.UpdateConfig();
+}
+
+defaultproperties
+{
+	Name="Default__ZTConfig_WrapperLoader"
+}
+

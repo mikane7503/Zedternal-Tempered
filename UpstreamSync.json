@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "upstream": {
+    "url": "https://github.com/DukeLindenhurst/zedternal-unlimited.git",
+    "branch": "main",
+    "temperedBaseCommit": "9a50dba2642c8501ad147ee8832c5d6b424d4530"
+  },
+  "paths": {
+    "upstreamPackage": "ZedternalRBPerkpackage",
+    "temperedPackage": "ZedternalTempered",
+    "changePackets": "UpstreamChangePackets"
+  },
+  "policies": {
+    "ZedternalRBPerkpackage": "read-only-upstream-reference",
+    "ZedternalTempered": "tempered-owned-overlay",
+    "Tempered_Build": "generated-do-not-track",
+    "ZedternalRBPerkpackage_Resources.upk": "release-artifact-do-not-track"
+  }
+}
