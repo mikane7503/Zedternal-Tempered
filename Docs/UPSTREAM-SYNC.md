@@ -24,3 +24,12 @@ release artifacts, not merge inputs.
 `UpstreamSync.json` stores the last accepted upstream base. Update
 `temperedBaseCommit` only after an Unlimited update has been fully ported and
 verified, not merely fetched or merged into the reference tree.
+
+For later updates, `Tools/Start-UpstreamIntegration.ps1` performs steps 1-3 in
+an isolated branch. It never builds or deploys the game. Use
+`Build-Deploy-Tempered.ps1 -SkipDeploy` for a compile-only gate.
+
+After creating an empty remote repository, connect and publish the prepared
+history with:
+
+`Tools/Connect-TemperedOrigin.ps1 -OriginUrl <URL> -PushIntegration`
