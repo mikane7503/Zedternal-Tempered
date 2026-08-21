@@ -78,7 +78,10 @@ static function ModifyDamageGiven(out int InDamage, int DefaultDamage, int upgLe
     }
     
     // FIXED: Level 20+: Dramatically increased venom spreading range (15m instead of 5m)
-    if (upgLevel >= class'DKConfig_Capstone'.default.Capstone_Rank2Level && InDamage >= MyKFPM.Health)
+    // Spread chance is config-driven ([ZedternalRBPerkpackage.DKUpgrade_Perk_Medusa]
+    // VenomSpreadChance, seeded 1.0 = always spread).
+    if (upgLevel >= class'DKConfig_Capstone'.default.Capstone_Rank2Level && InDamage >= MyKFPM.Health
+        && FRand() <= default.VenomSpreadChance)
     {
         // Find all monsters within 15m of the killed monster (was 5m)
         foreach MyKFPM.CollidingActors(class'KFPawn_Monster', NearbyMonster, 1500.0f) // 15m = 1500 units (3x larger)
@@ -112,6 +115,21 @@ static function ApplyPoisonToMonster(KFPawn_Monster Monster, KFPlayerController 
     // FIXED: Apply poison DoT with per-tick damage (2 per tick, not total 10)
     // This should result in 2 damage per second for 5 seconds = 10 total damage
     Monster.ApplyDamageOverTime(default.PoisonDamagePerSecond, PC, class'DKDT_Medusa_Poison');
+}
+
+// Scale the poison DoT duration to the configured value. The damage type's
+// baked-in DoT_Duration (5s) cannot read config in defaultproperties, so the
+// duration is adjusted here relative to that base.
+// Config: [ZedternalRBPerkpackage.DKUpgrade_Perk_Medusa] PoisonDuration
+static function ModifyDoTScaler(out float InDoTScaler, float DefaultDotScaler, int upgLevel, optional class<KFDamageType> KFDT, optional bool bNapalmInfected)
+{
+    if (KFDT == None || !ClassIsChildOf(KFDT, class'DKDT_Medusa_Poison'))
+        return;
+    
+    if (class'DKDT_Medusa_Poison'.default.DoT_Duration > 0.0f)
+    {
+        InDoTScaler *= default.PoisonDuration / class'DKDT_Medusa_Poison'.default.DoT_Duration;
+    }
 }
 
 // Apply reload speed bonus from Serpentine Speed + current scales

@@ -312,14 +312,18 @@ defaultproperties
 	bShouldLocalize=True
 	LocPackage="ZedternalRBPerkpackage"
 	LocSection="DKUpgrade_Perk_Domain"
-	LocalizeDescriptionLineCount=4
+	LocalizeDescriptionLineCount=8
 
 	UpgradeName="Domain"
 
-	upgradeDescription(0)="Press your <font color=\"#15d7fa\">Domain</font> key to deploy a <font color=\"#be4d25\">Room</font> at your feet. Its <font color=\"#77d914\">radius</font> and <font color=\"#77d914\">duration</font> grow with every rank."
-	upgradeDescription(1)="While the Room is up: <font color=\"#15d7fa\">hold</font> the key to open the <font color=\"#be4d25\">ability wheel</font>, aim with the mouse, and <font color=\"#15d7fa\">release</font> to cast: <font color=\"#ffaa33\">Shift</font> (teleport), <font color=\"#ffaa33\">Sever</font> (decapitate a non-boss / swap a boss), <font color=\"#ffaa33\">Discharge</font> (AoE), or <font color=\"#ffaa33\">Collapse</font> (end early with a burst)."
-	upgradeDescription(2)="Inside your Room you take <font color=\"#77d914\">reduced damage</font>, deal <font color=\"#77d914\">bonus damage</font> to zeds, <font color=\"#ff3399\">lifesteal</font> on hits, and <font color=\"#15d7fa\">see zed health</font>."
-	upgradeDescription(3)="<font color=\"#8B0000\">LEVEL 10:</font> bigger, longer Room. <font color=\"#8B0000\">LEVEL 20:</font> the Room expands to cover the whole map, with a doubled Collapse burst."
+	upgradeDescription(0)="Press <font color=\"#15d7fa\">[L]</font> (default key) to deploy a <font color=\"#be4d25\">Room</font> at your feet. Its <font color=\"#77d914\">radius</font> and <font color=\"#77d914\">duration</font> grow with every rank."
+	upgradeDescription(1)=""
+	upgradeDescription(2)="While the Room is up, press <font color=\"#15d7fa\">[L]</font> again to open the <font color=\"#be4d25\">ability wheel</font> and left-click an ability to cast it:"
+	upgradeDescription(3)="<font color=\"#ffaa33\">Shift</font>: teleport | <font color=\"#ffaa33\">Sever</font>: decapitate a non-boss / swap with a boss | <font color=\"#ffaa33\">Discharge</font>: AoE knockdown | <font color=\"#ffaa33\">Collapse</font>: end early with a damage burst"
+	upgradeDescription(4)=""
+	upgradeDescription(5)="Inside your Room: <font color=\"#77d914\">reduced damage taken</font>, <font color=\"#77d914\">bonus damage</font> to zeds, <font color=\"#ff3399\">lifesteal</font> on hits, and you <font color=\"#15d7fa\">see zed health</font>."
+	upgradeDescription(6)=""
+	upgradeDescription(7)="<font color=\"#8B0000\">LEVEL 10:</font> bigger, longer Room. <font color=\"#8B0000\">LEVEL 20:</font> the Room expands to cover the whole map and the Collapse burst is doubled."
 
 	// Placeholder rank art (reuses Jekyll&Hyde rank icons). Swap for real Domain art.
 	UpgradeIcon(0)=Texture2D'ZedternalRBPerkpackage_Resources.Perks.UI_Perk_Domain_Rank_0'

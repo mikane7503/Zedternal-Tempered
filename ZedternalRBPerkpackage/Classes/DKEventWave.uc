@@ -15,8 +15,8 @@
 // ===================================================================
 class DKEventWave extends Object;
 
-var const Texture2D EventIcons[27];
-var const Color EventColors[27];
+var const Texture2D EventIcons[33];
+var const Color EventColors[33];
 
 static function DrawOverlay(Canvas C, byte EventID, float Alpha, float WaveElapsedTime)
 {
@@ -281,14 +281,14 @@ static function DrawDontBlink(Canvas C, float Alpha, float Time)
 
 static function Texture2D GetEventIcon(byte EventID)
 {
-	if (EventID >= 1 && EventID <= 26)
+	if (EventID >= 1 && EventID <= 32)
 		return default.EventIcons[EventID];
 	return None;
 }
 
 static function Color GetEventColor(byte EventID)
 {
-	if (EventID >= 1 && EventID <= 26)
+	if (EventID >= 1 && EventID <= 32)
 		return default.EventColors[EventID];
 	return default.EventColors[0];
 }
@@ -323,6 +323,12 @@ defaultproperties
 	EventIcons(24)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_Jitterbug'
 	EventIcons(25)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_CostumeParty'
 	EventIcons(26)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_DontBlink'
+	EventIcons(27)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_PassTheBomb'
+	EventIcons(28)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_RedLightGreenLight'
+	EventIcons(29)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_FloorIsLava'
+	EventIcons(30)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_BodyguardBond'
+	EventIcons(31)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_BountyBoard'
+	EventIcons(32)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_GoldenZedRelay'
 
 	EventColors(0)=(R=255,G=255,B=255,A=255)
 	EventColors(1)=(R=0,G=0,B=0,A=0)
@@ -351,6 +357,12 @@ defaultproperties
 	EventColors(24)=(R=0,G=220,B=255,A=255)
 	EventColors(25)=(R=255,G=80,B=200,A=255)
 	EventColors(26)=(R=200,G=210,B=230,A=255)
+	EventColors(27)=(R=255,G=120,B=0,A=255)
+	EventColors(28)=(R=255,G=60,B=60,A=255)
+	EventColors(29)=(R=255,G=140,B=20,A=255)
+	EventColors(30)=(R=80,G=200,B=255,A=255)
+	EventColors(31)=(R=255,G=200,B=60,A=255)
+	EventColors(32)=(R=255,G=215,B=0,A=255)
 
 	Name="Default__DKEventWave"
 }

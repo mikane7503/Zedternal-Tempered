@@ -4,10 +4,11 @@
 // Defines how perks are unlocked:
 // - Prerequisite rules: need specific perks at specific levels
 // - Achievement locks: perk hidden until a specific achievement is completed
+// - Achievement target overrides: change the required count of an achievement
 // - Exclusion rules: buying one perk hides another (bidirectional)
 //
-// Admins can modify these in KFZedternalReborn_Upgrades.ini to
-// change, add, or remove unlock requirements for any perk.
+// Admins can modify these in KFZedternalUnlimited.ini under
+// [ZedternalRBPerkpackage.DKConfig_PerkUnlockRules].
 //
 // Perk names use class names without package prefix.
 // Examples: DKUpgrade_Perk_Riot, WMUpgrade_Perk_Berserker
@@ -16,6 +17,14 @@
 //   KillMilestone1500, KillMilestone5000, HeadshotHero, ScrakeHunter,
 //   NoTrader5Waves, BossWaveComplete, Untouchable, FleshpoundSlayer,
 //   BossWaveSpeed, NoTrader10Waves, SurvivalStreak20
+//
+// The wave/kill/etc. count of an achievement is baked into the
+// achievement itself, NOT parsed from the ID string. To change a
+// requirement (e.g. Tycoon after only 2 no-trader waves), keep the
+// valid AchievementID and override its target:
+//   AchievementTargetOverrides=(AchievementID="NoTrader5Waves",RequiredCount=2)
+// Inventing new IDs (e.g. "NoTrader2Waves") does NOT work and leaves
+// the perk locked with no way to unlock it.
 // ===================================================================
 class DKConfig_PerkUnlockRules extends Object
 	config(ZedternalUnlimited);
@@ -35,6 +44,16 @@ struct S_AchievementPerkUnlock
 	var string AchievementID;
 };
 
+// Override the RequiredCount of an existing achievement (see the valid
+// AchievementID list in the header). Applied at match start, before
+// perk links are wired, so progress display and completion checks all
+// use the new target.
+struct S_AchievementTargetOverride
+{
+	var string AchievementID;
+	var int RequiredCount;
+};
+
 struct S_PerkExclusionRule
 {
 	var string PerkA;
@@ -52,6 +71,7 @@ struct S_RankPerkUnlock
 
 var config array<S_PerkUnlockRule> PerkUnlockRules;
 var config array<S_AchievementPerkUnlock> AchievementPerkUnlocks;
+var config array<S_AchievementTargetOverride> AchievementTargetOverrides;
 var config array<S_PerkExclusionRule> PerkExclusionRules;
 var config array<S_RankPerkUnlock> RankPerkUnlocks;
 var config int MODEVERSION;
@@ -91,6 +111,19 @@ static function InitializeConfig()
 		default.MODEVERSION = 2;
 		static.StaticSaveConfig();
 	}
+
+	// v3: introduce AchievementTargetOverrides. Seeded with a no-op entry
+	// (NoTrader5Waves at its default target of 5) so the line is VISIBLE
+	// in the ini and self-documents the syntax; matching counts are
+	// skipped at apply time, so this changes nothing until edited.
+	if (default.MODEVERSION < 3)
+	{
+		default.AchievementTargetOverrides.Length = 0;
+		AddDefaultTargetOverride("NoTrader5Waves", 5);
+
+		default.MODEVERSION = 3;
+		static.StaticSaveConfig();
+	}
 }
 
 static function AddDefaultUnlockRule(string PerkName, string Req1, int Req1Lvl, string Req2, int Req2Lvl)
@@ -114,6 +147,16 @@ static function AddDefaultAchievementUnlock(string PerkName, string AchievementI
 	Entry.AchievementID = AchievementID;
 
 	default.AchievementPerkUnlocks.AddItem(Entry);
+}
+
+static function AddDefaultTargetOverride(string AchievementID, int RequiredCount)
+{
+	local S_AchievementTargetOverride Entry;
+
+	Entry.AchievementID = AchievementID;
+	Entry.RequiredCount = RequiredCount;
+
+	default.AchievementTargetOverrides.AddItem(Entry);
 }
 
 static function AddDefaultRankUnlock(string PerkName, int RequiredRank, byte UnlockMode)
@@ -241,6 +284,23 @@ static function CheckBasicConfigValues()
 		}
 	}
 
+	// Validate achievement target overrides
+	for (i = 0; i < default.AchievementTargetOverrides.Length; ++i)
+	{
+		if (default.AchievementTargetOverrides[i].AchievementID == "")
+		{
+			`log("[DK_UNLOCK] WARNING: Empty AchievementID in target override at index" @ i $ ", removing");
+			default.AchievementTargetOverrides.Remove(i, 1);
+			--i;
+			continue;
+		}
+		if (default.AchievementTargetOverrides[i].RequiredCount < 1)
+		{
+			`log("[DK_UNLOCK] WARNING: RequiredCount < 1 for target override" @ default.AchievementTargetOverrides[i].AchievementID $ ", clamping to 1");
+			default.AchievementTargetOverrides[i].RequiredCount = 1;
+		}
+	}
+
 	// Validate rank perk unlocks
 	for (i = 0; i < default.RankPerkUnlocks.Length; ++i)
 	{
@@ -265,6 +325,7 @@ static function CheckBasicConfigValues()
 
 	`log("[DK_UNLOCK] Config:" @ default.PerkUnlockRules.Length @ "unlock rules,"
 		@ default.AchievementPerkUnlocks.Length @ "achievement unlocks,"
+		@ default.AchievementTargetOverrides.Length @ "target overrides,"
 		@ default.PerkExclusionRules.Length @ "exclusion rules,"
 		@ default.RankPerkUnlocks.Length @ "rank unlocks");
 }
@@ -312,6 +373,11 @@ static function ApplyAchievementPerkLinks(DKAchievementData AchData)
 
 	if (AchData == None) return;
 
+	// Apply target overrides FIRST so the log below reports final values
+	// and every downstream consumer (progress HUD, completion checks)
+	// sees the overridden RequiredCount from the start of the match.
+	ApplyAchievementTargetOverrides(AchData);
+
 	for (i = 0; i < default.AchievementPerkUnlocks.Length; ++i)
 	{
 		AchIdx = AchData.FindAchievementByName(default.AchievementPerkUnlocks[i].AchievementID);
@@ -324,8 +390,52 @@ static function ApplyAchievementPerkLinks(DKAchievementData AchData)
 		else
 		{
 			`log("[DK_UNLOCK] WARNING: Achievement ID" @ default.AchievementPerkUnlocks[i].AchievementID
-				@ "not found! Cannot link to perk" @ default.AchievementPerkUnlocks[i].PerkName);
+				@ "not found! Cannot link to perk" @ default.AchievementPerkUnlocks[i].PerkName
+				@ "- the perk stays LOCKED with no way to unlock it. Use a valid"
+				@ "AchievementID (see DKConfig_PerkUnlockRules header) and, to change"
+				@ "the requirement, an AchievementTargetOverrides entry.");
 		}
+	}
+}
+
+// Rewrite the RequiredCount of existing achievements from config.
+// Config: [ZedternalRBPerkpackage.DKConfig_PerkUnlockRules]
+// AchievementTargetOverrides=(AchievementID="NoTrader5Waves",RequiredCount=2)
+// The hardcoded description text is patched best-effort: numeric
+// occurrences of the old count are replaced; spelled-out numbers
+// ("Five waves...") are left as-is.
+static function ApplyAchievementTargetOverrides(DKAchievementData AchData)
+{
+	local int i, AchIdx, OldCount;
+
+	if (AchData == None) return;
+
+	for (i = 0; i < default.AchievementTargetOverrides.Length; ++i)
+	{
+		AchIdx = AchData.FindAchievementByName(default.AchievementTargetOverrides[i].AchievementID);
+		if (AchIdx == INDEX_NONE)
+		{
+			`log("[DK_UNLOCK] WARNING: Target override for unknown Achievement ID"
+				@ default.AchievementTargetOverrides[i].AchievementID @ "- ignored");
+			continue;
+		}
+
+		OldCount = AchData.Achievements[AchIdx].RequiredCount;
+		if (OldCount == default.AchievementTargetOverrides[i].RequiredCount)
+			continue;
+
+		AchData.Achievements[AchIdx].RequiredCount = default.AchievementTargetOverrides[i].RequiredCount;
+
+		// Best-effort description patch (digits only)
+		AchData.Achievements[AchIdx].Description = Repl(
+			AchData.Achievements[AchIdx].Description,
+			string(OldCount),
+			string(default.AchievementTargetOverrides[i].RequiredCount)
+		);
+
+		`log("[DK_UNLOCK] Achievement target override:"
+			@ default.AchievementTargetOverrides[i].AchievementID
+			@ "RequiredCount" @ OldCount @ "->" @ default.AchievementTargetOverrides[i].RequiredCount);
 	}
 }
 

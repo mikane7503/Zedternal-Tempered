@@ -35,6 +35,12 @@ var config float Weight_XMen;
 var config float Weight_Jitterbug;
 var config float Weight_CostumeParty;
 var config float Weight_DontBlink;
+var config float Weight_PassTheBomb;
+var config float Weight_RedLightGreenLight;
+var config float Weight_FloorIsLava;
+var config float Weight_BodyguardBond;
+var config float Weight_BountyBoard;
+var config float Weight_GoldenZedRelay;
 
 // Per-event solo disable. When solo (1 living player), events whose flag is
 // True are removed from the pool on top of the inherent multiplayer-only
@@ -53,6 +59,9 @@ var config bool SoloDisable_XMen;
 var config bool SoloDisable_Jitterbug;
 var config bool SoloDisable_CostumeParty;
 var config bool SoloDisable_DontBlink;
+var config bool SoloDisable_RedLightGreenLight;
+var config bool SoloDisable_FloorIsLava;
+var config bool SoloDisable_BountyBoard;
 
 var config int MODEVERSION;
 
@@ -84,6 +93,12 @@ var localized string EventName_ToMeMyXMen;
 var localized string EventName_Jitterbug;
 var localized string EventName_CostumeParty;
 var localized string EventName_DontBlink;
+var localized string EventName_PassTheBomb;
+var localized string EventName_RedLightGreenLight;
+var localized string EventName_FloorIsLava;
+var localized string EventName_BodyguardBond;
+var localized string EventName_BountyBoard;
+var localized string EventName_GoldenZedRelay;
 
 var localized string EventDesc_Isolation;
 var localized string EventDesc_BlackoutPulse;
@@ -105,8 +120,14 @@ var localized string EventDesc_ToMeMyXMen;
 var localized string EventDesc_Jitterbug;
 var localized string EventDesc_CostumeParty;
 var localized string EventDesc_DontBlink;
+var localized string EventDesc_PassTheBomb;
+var localized string EventDesc_RedLightGreenLight;
+var localized string EventDesc_FloorIsLava;
+var localized string EventDesc_BodyguardBond;
+var localized string EventDesc_BountyBoard;
+var localized string EventDesc_GoldenZedRelay;
 
-const NUM_EVENTS = 26;
+const NUM_EVENTS = 32;
 
 static function UpdateConfig()
 {
@@ -184,6 +205,25 @@ static function UpdateConfig()
 		default.MODEVERSION = 5;
 		static.StaticSaveConfig();
 	}
+
+	if (default.MODEVERSION < 6)
+	{
+		// Minigame batch: Pass The Bomb / Red Light Green Light /
+		// The Floor Is Lava / Bodyguard Bond / Bounty Board / Golden Zed Relay
+		default.Weight_PassTheBomb = 0.7f;
+		default.Weight_RedLightGreenLight = 0.7f;
+		default.Weight_FloorIsLava = 0.7f;
+		default.Weight_BodyguardBond = 0.6f;
+		default.Weight_BountyBoard = 0.7f;
+		default.Weight_GoldenZedRelay = 0.6f;
+
+		default.SoloDisable_RedLightGreenLight = False;
+		default.SoloDisable_FloorIsLava = False;
+		default.SoloDisable_BountyBoard = False;
+
+		default.MODEVERSION = 6;
+		static.StaticSaveConfig();
+	}
 }
 
 static function CheckBasicConfigValues()
@@ -200,7 +240,7 @@ static function CheckBasicConfigValues()
 static function byte RollEventWave(int WaveNum, int EventsTriggeredThisMatch, int PlayerCount)
 {
 	local float TotalWeight, Roll, Cumulative;
-	local float Weights[26];
+	local float Weights[32];
 	local int i;
 
 	if (!default.bEnabled)
@@ -241,6 +281,12 @@ static function byte RollEventWave(int WaveNum, int EventsTriggeredThisMatch, in
 	Weights[23] = default.Weight_Jitterbug;
 	Weights[24] = default.Weight_CostumeParty;
 	Weights[25] = default.Weight_DontBlink;
+	Weights[26] = default.Weight_PassTheBomb;
+	Weights[27] = default.Weight_RedLightGreenLight;
+	Weights[28] = default.Weight_FloorIsLava;
+	Weights[29] = default.Weight_BodyguardBond;
+	Weights[30] = default.Weight_BountyBoard;
+	Weights[31] = default.Weight_GoldenZedRelay;
 
 	// Filter out multiplayer-only events when solo
 	if (PlayerCount <= 1)
@@ -299,6 +345,12 @@ static function string GetEventNameFallback(byte EventID)
 		case 24: return "Jitterbug";
 		case 25: return "Costume Party";
 		case 26: return "Don't Blink";
+		case 27: return "Pass The Bomb";
+		case 28: return "Red Light, Green Light";
+		case 29: return "The Floor Is Lava";
+		case 30: return "Bodyguard Bond";
+		case 31: return "Bounty Board";
+		case 32: return "Golden Zed Relay";
 		default: return "";
 	}
 }
@@ -327,6 +379,12 @@ static function string GetLocalizedEventName(byte EventID)
 		case 24: return default.EventName_Jitterbug;
 		case 25: return default.EventName_CostumeParty;
 		case 26: return default.EventName_DontBlink;
+		case 27: return default.EventName_PassTheBomb;
+		case 28: return default.EventName_RedLightGreenLight;
+		case 29: return default.EventName_FloorIsLava;
+		case 30: return default.EventName_BodyguardBond;
+		case 31: return default.EventName_BountyBoard;
+		case 32: return default.EventName_GoldenZedRelay;
 		default: return default.EventName_None;
 	}
 }
@@ -354,6 +412,12 @@ static function byte GetEventIDFromName(string EventName)
 	if (EventName == "JITTERBUG" || EventName == "JITTER") return 24;
 	if (EventName == "COSTUMEPARTY" || EventName == "COSTUME" || EventName == "FREAKSHOW") return 25;
 	if (EventName == "DONTBLINK" || EventName == "DONT_BLINK" || EventName == "BLINK" || EventName == "ANGELS") return 26;
+	if (EventName == "PASSTHEBOMB" || EventName == "BOMB" || EventName == "PTB") return 27;
+	if (EventName == "REDLIGHTGREENLIGHT" || EventName == "REDLIGHT" || EventName == "RLGL") return 28;
+	if (EventName == "FLOORISLAVA" || EventName == "LAVA") return 29;
+	if (EventName == "BODYGUARDBOND" || EventName == "BODYGUARD" || EventName == "BOND") return 30;
+	if (EventName == "BOUNTYBOARD" || EventName == "BOUNTY") return 31;
+	if (EventName == "GOLDENZEDRELAY" || EventName == "GOLDEN" || EventName == "RELAY") return 32;
 	return 0;
 }
 
@@ -382,6 +446,12 @@ static function name GetEventSoundID(byte EventID)
 		case 24: return 'EventWave_Jitterbug';
 		case 25: return 'EventWave_CostumeParty';
 		case 26: return 'EventWave_DontBlink';
+		case 27: return 'EventWave_PassTheBomb';
+		case 28: return 'EventWave_RedLightGreenLight';
+		case 29: return 'EventWave_FloorIsLava';
+		case 30: return 'EventWave_BodyguardBond';
+		case 31: return 'EventWave_BountyBoard';
+		case 32: return 'EventWave_GoldenZedRelay';
 		default: return '';
 	}
 }
@@ -400,9 +470,16 @@ static function string GetEventDescriptionFallback(byte EventID)
 {
 	switch (EventID)
 	{
+		case 10: return "One player is the hot potato and takes 3x damage - it hops to a new player on a timer";
 		case 24: return "Every zed moves at a random speed";
 		case 25: return "Zeds appear at random sizes (cosmetic only)";
 		case 26: return "Zeds freeze while you look at them, and lunge the moment you look away";
+		case 27: return "A live bomb! Touch a teammate to pass it before the fuse runs out";
+		case 28: return "When the light turns RED, stop moving or take damage. Shooting is allowed";
+		case 29: return "Stay inside the safe zone. It relocates - keep up or burn";
+		case 30: return "You are bonded to a partner. Stay close for protection - drift apart and they feel your pain";
+		case 31: return "Everyone gets a personal bounty. Complete ALL of them for a team payout";
+		case 32: return "Golden zeds drop trophies - but the killer cannot collect. A teammate must grab it";
 		default: return "";
 	}
 }
@@ -431,6 +508,12 @@ static function string GetLocalizedEventDescription(byte EventID)
 		case 24: return default.EventDesc_Jitterbug;
 		case 25: return default.EventDesc_CostumeParty;
 		case 26: return default.EventDesc_DontBlink;
+		case 27: return default.EventDesc_PassTheBomb;
+		case 28: return default.EventDesc_RedLightGreenLight;
+		case 29: return default.EventDesc_FloorIsLava;
+		case 30: return default.EventDesc_BodyguardBond;
+		case 31: return default.EventDesc_BountyBoard;
+		case 32: return default.EventDesc_GoldenZedRelay;
 		default: return "";
 	}
 }
@@ -459,6 +542,12 @@ static function bool NeedsManager(byte EventID)
 		case 24: return True;  // Jitterbug (needs OnZedSpawned dispatch)
 		case 25: return True;  // Costume Party (needs OnZedSpawned dispatch)
 		case 26: return True;  // Don't Blink (gaze loop + OnZedSpawned)
+		case 27: return True;  // Pass The Bomb (fuse + transfer loop)
+		case 28: return True;  // Red Light Green Light (phase machine)
+		case 29: return True;  // The Floor Is Lava (zone + tick)
+		case 30: return True;  // Bodyguard Bond (pairing + damage mirror)
+		case 31: return True;  // Bounty Board (quota tracking)
+		case 32: return True;  // Golden Zed Relay (golden picker + drop)
 		default: return False;
 	}
 }
@@ -476,6 +565,9 @@ static function bool NeedsMultiplePlayers(byte EventID)
 		case 15: return True;  // Chain Gang
 		case 18: return True;  // Marked for Death
 		case 22: return True;  // Duel
+		case 27: return True;  // Pass The Bomb
+		case 30: return True;  // Bodyguard Bond
+		case 32: return True;  // Golden Zed Relay
 		default: return False;
 	}
 }
@@ -499,6 +591,9 @@ static function bool IsDisabledInSolo(byte EventID)
 		case 24: return default.SoloDisable_Jitterbug;
 		case 25: return default.SoloDisable_CostumeParty;
 		case 26: return default.SoloDisable_DontBlink;
+		case 28: return default.SoloDisable_RedLightGreenLight;
+		case 29: return default.SoloDisable_FloorIsLava;
+		case 31: return default.SoloDisable_BountyBoard;
 		default: return False;
 	}
 }

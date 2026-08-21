@@ -3,8 +3,7 @@ class DKUpgrade_Skill_WingsOfMercy_Helper extends Info
 
 var KFPawn_Human Player;
 var byte HurtAllyCount;
-var const float RadiusSQ, HealthThreshold, Update;
-var const byte MaxHurtAllies;
+var const float Update;
 
 replication
 {
@@ -37,12 +36,15 @@ function Timer()
 	Count = 0;
 	foreach DynamicActors(class'KFPawn_Human', KFPH)
 	{
+		// Thresholds are config-driven:
+		// [ZedternalRBPerkpackage.DKUpgrade_Skill_WingsOfMercy]
+		// AllyRadiusSQ / HealthThreshold / MaxHurtAllies
 		if (KFPH != Player && KFPH.IsAliveAndWell()
-			&& KFPH.GetHealthPercentage() < HealthThreshold
-			&& VSizeSQ(Player.Location - KFPH.Location) <= RadiusSQ)
+			&& KFPH.GetHealthPercentage() < class'DKUpgrade_Skill_WingsOfMercy'.default.HealthThreshold
+			&& VSizeSQ(Player.Location - KFPH.Location) <= class'DKUpgrade_Skill_WingsOfMercy'.default.AllyRadiusSQ)
 		{
 			++Count;
-			if (Count >= MaxHurtAllies)
+			if (Count >= class'DKUpgrade_Skill_WingsOfMercy'.default.MaxHurtAllies)
 				break;
 		}
 	}
@@ -60,9 +62,6 @@ defaultproperties
 	bSkipActorPropertyReplication=False
 	bOnlyRelevantToOwner=True
 	HurtAllyCount=0
-	RadiusSQ=640000.0f
-	HealthThreshold=0.5f
-	MaxHurtAllies=3
 	Update=1.0f
 
 	Name="Default__DKUpgrade_Skill_WingsOfMercy_Helper"

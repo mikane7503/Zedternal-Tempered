@@ -68,6 +68,16 @@ var AudioComponent EventMusicComponent;
 var string XMenPowerName;
 var string XMenPowerDesc;
 
+// Minigame event wave HUD data (batch 27-32; set by server RPCs, drawn by HUD)
+var string EventPartnerName;     // Bodyguard Bond: partner's player name
+var string EventQuotaText;       // Bounty Board: e.g. "Crawlers"
+var int EventQuotaNeeded;        // Bounty Board: kills required
+var int EventQuotaProgress;      // Bounty Board: kills so far
+// Client-side display window for the X-Men power box. The HUD only draws
+// the box until this time; without it the box sat on screen for the whole
+// wave.
+var transient float XMenPowerShowUntil;
+
 // ===================================================================
 // BULK SYNC SYSTEM — STRUCT + VAR DECLARATIONS
 // ===================================================================
@@ -1161,18 +1171,108 @@ simulated function CheckAndApplyDefaultKeybindings()
 
 simulated function ApplyMissingKeybindings(DK_Config_Keybindings KeyConfig)
 {
-    local int i;
-    local string BindCommand;
+    local int i, BindIdx;
+    local string KeyName, WantedCmd, CurCmd;
+
+    if (PlayerInput == None)
+        return;
 
     for (i = 0; i < KeyConfig.DefaultKeybindings.Length; i++)
     {
-        if (!IsKeyBound(KeyConfig.DefaultKeybindings[i].KeyName))
+        KeyName = KeyConfig.DefaultKeybindings[i].KeyName;
+        WantedCmd = KeyConfig.DefaultKeybindings[i].Command;
+        BindIdx = FindBindingIndex(KeyName);
+
+        if (BindIdx == INDEX_NONE || PlayerInput.Bindings[BindIdx].Command == "")
         {
-            BindCommand = "SetBind" @ KeyConfig.DefaultKeybindings[i].KeyName @ KeyConfig.DefaultKeybindings[i].Command;
-            ConsoleCommand(BindCommand);
-            `log("DKPlayerController [CLIENT]: Filled missing keybind -" @ KeyConfig.DefaultKeybindings[i].KeyName @ "=" @ KeyConfig.DefaultKeybindings[i].Command);
+            // Unbound key: fresh SetBind creates a clean, modifier-free entry
+            ConsoleCommand("SetBind" @ KeyName @ WantedCmd);
+            `log("DKPlayerController [CLIENT]: Filled missing keybind -" @ KeyName @ "=" @ WantedCmd);
+            continue;
+        }
+
+        CurCmd = PlayerInput.Bindings[BindIdx].Command;
+
+        if (IsJunkCommand(CurCmd))
+        {
+            // Stock dev relic squatting on the key (BasePath, RECOMPILESHADERS...).
+            // Overwrite IN PLACE and clear modifier gating - SetBind would
+            // inherit the relic's Ctrl/Shift flags (this is exactly what broke
+            // the Wishmaster confirm key: Period's RECOMPILESHADERS relic ships
+            // Control=True,Shift=True).
+            SanitizeBinding(BindIdx, WantedCmd);
+            `log("DKPlayerController [CLIENT]: Overwrote junk keybind -" @ KeyName @ "=" @ WantedCmd);
+        }
+        else if (CurCmd ~= WantedCmd
+            && (PlayerInput.Bindings[BindIdx].Control || PlayerInput.Bindings[BindIdx].Shift || PlayerInput.Bindings[BindIdx].Alt))
+        {
+            // Repair pass: correct command but modifier-gated (poisoned by an
+            // earlier SetBind over a relic). Strip the gating.
+            SanitizeBinding(BindIdx, WantedCmd);
+            `log("DKPlayerController [CLIENT]: Repaired modifier-gated keybind -" @ KeyName @ "=" @ WantedCmd);
         }
     }
+}
+
+// Index of the first bindings entry for the given key, INDEX_NONE if absent.
+simulated function int FindBindingIndex(string KeyName)
+{
+    local int i;
+
+    for (i = 0; i < PlayerInput.Bindings.Length; i++)
+    {
+        if (PlayerInput.Bindings[i].Name == name(KeyName))
+            return i;
+    }
+
+    return INDEX_NONE;
+}
+
+// Rewrites a bindings entry in place: new command, no modifier gating.
+simulated function SanitizeBinding(int BindIdx, string NewCmd)
+{
+    PlayerInput.Bindings[BindIdx].Command = NewCmd;
+    PlayerInput.Bindings[BindIdx].Control = false;
+    PlayerInput.Bindings[BindIdx].Shift = false;
+    PlayerInput.Bindings[BindIdx].Alt = false;
+    PlayerInput.Bindings[BindIdx].bIgnoreCtrl = false;
+    PlayerInput.Bindings[BindIdx].bIgnoreShift = false;
+    PlayerInput.Bindings[BindIdx].bIgnoreAlt = false;
+    PlayerInput.SaveConfig();
+}
+
+// True if the key's current binding is inert engine debug junk that KF2
+// ships by default and no shipping game ever uses - safe to override.
+// Critically: N = "BasePath 1" and M = "BasePath 0" (pathnode debug
+// relics) are bound on EVERY stock KF2 install, so without this check
+// the fill pass sees them as "already bound" and the Goalkeeper /
+// Fastball keys silently never bind.
+simulated function bool IsJunkBinding(string KeyName)
+{
+    local int i;
+
+    if (PlayerInput == None)
+        return false;
+
+    i = FindBindingIndex(KeyName);
+    if (i == INDEX_NONE || PlayerInput.Bindings[i].Command == "")
+        return false;
+
+    return IsJunkCommand(PlayerInput.Bindings[i].Command);
+}
+
+simulated function bool IsJunkCommand(string Cmd)
+{
+    // Pathnode / navigation debug commands (BasePath 0, BasePath 1, ...)
+    if (Left(Cmd, 8) ~= "BasePath")
+        return true;
+
+    // Shader recompile dev relic (stock KF2 ships Ctrl+Shift+Period
+    // bound to "RECOMPILESHADERS CHANGED")
+    if (Left(Cmd, 16) ~= "RECOMPILESHADERS")
+        return true;
+
+    return false;
 }
 
 // True if KeyName is currently bound to any (non-empty) command.
@@ -1517,6 +1617,100 @@ reliable server function ServerActivateHyde()
 }
 
 // ===================================================================
+// GOALKEEPER - dedicated catch/throw key (default N). One key, two
+// states: no charge held opens a catch window, charge held hurls it
+// back. All gating lives in the helper.
+// ===================================================================
+exec function ActivateGoalkeeper()
+{
+    ServerActivateGoalkeeper();
+}
+
+// ===================================================================
+// WISHMASTER - Cycle (default Comma) highlights the next option on
+// the wish card; Confirm (default Period) locks it in. Two-stage:
+// pick the wish, then pick the target player. All gating lives in
+// the helper (selection only exists during trader time).
+// ===================================================================
+exec function WishCycle()
+{
+    ServerWishCycle();
+}
+
+exec function WishConfirm()
+{
+    ServerWishConfirm();
+}
+
+reliable server function ServerWishCycle()
+{
+    local DKUpgrade_Perk_Wishmaster_Helper H;
+
+    if (Pawn == None)
+        return;
+
+    H = class'DKUpgrade_Perk_Wishmaster'.static.FindHelper(Pawn);
+    if (H != None)
+        H.CycleSelection();
+}
+
+reliable server function ServerWishConfirm()
+{
+    local DKUpgrade_Perk_Wishmaster_Helper H;
+
+    if (Pawn == None)
+        return;
+
+    H = class'DKUpgrade_Perk_Wishmaster'.static.FindHelper(Pawn);
+    if (H != None)
+        H.ConfirmSelection();
+}
+
+reliable server function ServerActivateGoalkeeper()
+{
+    local DKUpgrade_Perk_Goalkeeper_Helper H;
+
+    if (Pawn == None)
+        return;
+
+    H = class'DKUpgrade_Perk_Goalkeeper'.static.FindHelper(Pawn);
+    if (H == None)
+    {
+        class'DKMessageManager'.static.SendMinor(self, "Goalkeeper: you do not have the Goalkeeper perk.");
+        return;
+    }
+
+    H.TryActivate();
+}
+
+// ===================================================================
+// FASTBALL - dedicated launch key (default M). Launches the teammate
+// in your aim cone (mutual-facing consent by default). All gating
+// lives in the helper.
+// ===================================================================
+exec function ActivateFastball()
+{
+    ServerActivateFastball();
+}
+
+reliable server function ServerActivateFastball()
+{
+    local DKUpgrade_Perk_Fastball_Helper H;
+
+    if (Pawn == None)
+        return;
+
+    H = class'DKUpgrade_Perk_Fastball'.static.FindHelper(Pawn);
+    if (H == None)
+    {
+        class'DKMessageManager'.static.SendMinor(self, "Fastball: you do not have the Fastball perk.");
+        return;
+    }
+
+    H.TryLaunch();
+}
+
+// ===================================================================
 // DOMAIN PERK - hold-to-wheel active. Press casts the Room (or opens the
 // ability wheel if the Room is already up); release fires the highlighted
 // wheel segment. Recommended bind: "DomainPress | OnRelease DomainRelease".
@@ -1700,11 +1894,11 @@ reliable server function ServerActivateAbilitySlot(int SlotIndex)
     local DKUpgrade_Skill_ExplosiveFury_Helper ExplosiveFuryHelper;
     local DKUpgrade_Skill_FieldSurgery_Helper FieldSurgeryHelper;
     local DKUpgrade_Skill_PyromaniacRush_Helper PyromaniacRushHelper;
-    local DKUpgrade_Skill_QuickDraw_Helper QuickDrawHelper;
+    local DKUpgrade_Skill_FastHands_Helper QuickDrawHelper;
     local DKUpgrade_Skill_ScavengersLuck_Helper ScavengersLuckHelper;
     local DKUpgrade_Skill_TacticalShield_Helper TacticalShieldHelper;
     local DKUpgrade_Skill_BreachingCharge_Helper BreachingChargeHelper;
-    local DKUpgrade_Skill_DeadEye_Helper DeadEyeHelper;
+    local DKUpgrade_Skill_EagleEye_Helper DeadEyeHelper;
     local DKUpgrade_Skill_Chronoshift_Helper ChronoshiftHelper;
     local DKUpgrade_Skill_Inferno_Helper InfernoHelper;
     local DKUpgrade_Skill_Bullseye_Helper BullseyeHelper;
@@ -1759,7 +1953,7 @@ reliable server function ServerActivateAbilitySlot(int SlotIndex)
         return;
     }
     
-    QuickDrawHelper = DKUpgrade_Skill_QuickDraw_Helper(Slot.Helper);
+    QuickDrawHelper = DKUpgrade_Skill_FastHands_Helper(Slot.Helper);
     if (QuickDrawHelper != None)
     {
         QuickDrawHelper.TryActivate();
@@ -1787,7 +1981,7 @@ reliable server function ServerActivateAbilitySlot(int SlotIndex)
         return;
     }
     
-    DeadEyeHelper = DKUpgrade_Skill_DeadEye_Helper(Slot.Helper);
+    DeadEyeHelper = DKUpgrade_Skill_EagleEye_Helper(Slot.Helper);
     if (DeadEyeHelper != None)
     {
         DeadEyeHelper.TryActivate();
@@ -2232,7 +2426,44 @@ reliable client function ClientReceiveXMenPower(string PowerName, string PowerDe
 {
     XMenPowerName = PowerName;
     XMenPowerDesc = PowerDesc;
+    // Show the power box for 10 seconds, then the HUD fades it out. The
+    // power itself stays active for the whole wave.
+    XMenPowerShowUntil = WorldInfo.TimeSeconds + 10.0f;
     `log("[DK_XMEN] Received power:" @ PowerName @ "-" @ PowerDesc);
+}
+
+// ===================================================================
+// MINIGAME EVENT WAVE RPCs (batch 27-32)
+// Per-player HUD data the GRI cannot carry (it is per-player, not global).
+// ===================================================================
+
+// Bodyguard Bond: tells this client who their partner is
+reliable client function ClientSetEventPartner(string PartnerName)
+{
+    EventPartnerName = PartnerName;
+}
+
+// Bounty Board: assigns this client's personal quota
+reliable client function ClientSetEventQuota(string CategoryText, int Needed)
+{
+    EventQuotaText = CategoryText;
+    EventQuotaNeeded = Needed;
+    EventQuotaProgress = 0;
+}
+
+// Bounty Board: progress tick
+reliable client function ClientUpdateEventQuota(int Progress)
+{
+    EventQuotaProgress = Progress;
+}
+
+// Clears all minigame HUD data when the event ends
+reliable client function ClientClearEventMinigameData()
+{
+    EventPartnerName = "";
+    EventQuotaText = "";
+    EventQuotaNeeded = 0;
+    EventQuotaProgress = 0;
 }
 
 /** Repeatedly stops KF2 Wwise music while event music is playing.

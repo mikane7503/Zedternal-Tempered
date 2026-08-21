@@ -5,7 +5,6 @@ var KFPawn_Human Player;
 var bool bChargeReady;
 var bool bWasSprinting;
 var bool bDeluxe;
-var const float NormalWindow, DeluxeWindow;
 var const float PollInterval;
 
 function PostBeginPlay()
@@ -41,10 +40,13 @@ function Timer()
 		bWasSprinting = False;
 		bChargeReady = True;
 
+		// Charge window is config-driven:
+		// [ZedternalRBPerkpackage.DKUpgrade_Skill_BatteringRam] ChargeWindow
+		// (index 0 = standard, 1 = deluxe)
 		if (bDeluxe)
-			SetTimer(DeluxeWindow, False, nameof(ExpireCharge));
+			SetTimer(class'DKUpgrade_Skill_BatteringRam'.default.ChargeWindow[1], False, nameof(ExpireCharge));
 		else
-			SetTimer(NormalWindow, False, nameof(ExpireCharge));
+			SetTimer(class'DKUpgrade_Skill_BatteringRam'.default.ChargeWindow[0], False, nameof(ExpireCharge));
 	}
 }
 
@@ -87,8 +89,6 @@ defaultproperties
 	bChargeReady=False
 	bWasSprinting=False
 	bDeluxe=False
-	NormalWindow=1.0f
-	DeluxeWindow=1.5f
 	PollInterval=0.1f
 
 	Name="Default__DKUpgrade_Skill_BatteringRam_Helper"

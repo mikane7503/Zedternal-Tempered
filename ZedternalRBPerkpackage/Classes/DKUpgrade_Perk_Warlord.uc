@@ -38,7 +38,10 @@ static function ModifyDamageGiven(out int InDamage, int DefaultDamage, int upgLe
 
 static simulated function GetReloadRateScalePassive(out float reloadRateFactor, int upgLevel)
 {
-	reloadRateFactor += default.ReloadSpeed * upgLevel;
+	// BUGFIX: reloadRateFactor is a TIME scale (smaller = faster). The old
+	// += INCREASED it, making reloads slower per level. Composed like
+	// ZR's Commando perk instead.
+	reloadRateFactor = 1.0f / (1.0f / reloadRateFactor + default.ReloadSpeed * upgLevel);
 }
 
 static simulated function ModifyRecoilPassive(out float recoilFactor, int upgLevel)
@@ -48,7 +51,10 @@ static simulated function ModifyRecoilPassive(out float recoilFactor, int upgLev
 
 static simulated function ModifyWeaponSwitchTimePassive(out float switchTimeFactor, int upgLevel)
 {
-	switchTimeFactor -= default.WeaponSwitchSpeed * upgLevel;
+	// Composed harmonically like ZR's QuickDraw so high levels cannot push
+	// the factor to zero or negative (the old linear subtraction went
+	// negative past level 50).
+	switchTimeFactor = 1.0f / (1.0f / switchTimeFactor + default.WeaponSwitchSpeed * upgLevel);
 }
 
 static simulated function ModifySpareAmmoAmountPassive(out float spareAmmoFactor, int upgLevel)

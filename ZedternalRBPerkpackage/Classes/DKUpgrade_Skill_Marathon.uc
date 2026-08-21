@@ -66,8 +66,8 @@ defaultproperties
     LocSection="DKUpgrade_Skill_Marathon"
 
     UpgradeName="Marathon"
-	upgradeDescription(0)="During Zed Time, increase your<font color=\"#ff3399\">Movement Speed</font> by <font color=\"#66cc00\">40%</font>."
-    upgradeDescription(1)="During Zed Time, increase your<font color=\"#ff3399\">Movement Speed</font> by <font color=\"#66cc00\">80%</font>."
+	upgradeDescription(0)="During <font color=\"#15d7fa\">ZED Time</font> you move at <font color=\"#ff3399\">full speed</font> and your weapons act <font color=\"#66cc00\">20%</font> faster (<font color=\"#66cc00\">40%</font> for small-magazine weapons)."
+    upgradeDescription(1)="During <font color=\"#15d7fa\">ZED Time</font> you move at <font color=\"#ff3399\">full speed</font> and your weapons act <font color=\"#66cc00\">40%</font> faster (<font color=\"#66cc00\">80%</font> for small-magazine weapons)."
 	UpgradeIcon(0)=Texture2D'ZedternalRBPerkpackage_Resources.Skills.UI_Skill_Marathon'
 	UpgradeIcon(1)=Texture2D'ZedternalRBPerkpackage_Resources.Skills.UI_Skill_Marathon_Deluxe'
     Name="Default__DKUpgrade_Skill_Marathon"

@@ -162,10 +162,15 @@ static function ModifyDamageGiven(out int InDamage, int DefaultDamage, int upgLe
 	if (DamageType != None && IsRotatingDamageType(DamageType))
 		return;
 
+	Helper = GetHelper(DamageInstigator.Pawn);
+
 	// ---- GLITCH PROC ----
-	if (FRand() < default.GlitchProcChancePerLevel * upgLevel)
+	// Skill: Stack Corruption adds a flat chance bonus via the helper.
+	if (FRand() < default.GlitchProcChancePerLevel * upgLevel
+		+ ((Helper != None) ? Helper.SkillGlitchChanceBonus : 0.0f))
 	{
-		GlitchType = Rand(4);
+		// Skill: Hex Edit unlocks a 5th outcome (armor).
+		GlitchType = Rand((Helper != None && Helper.SkillArmorProcLevel > 0) ? 5 : 4);
 		switch (GlitchType)
 		{
 			case 0: // Bonus damage
@@ -190,6 +195,14 @@ static function ModifyDamageGiven(out int InDamage, int DefaultDamage, int upgLe
 			case 3: // HP regen
 				if (DamageInstigator.Pawn.Health < DamageInstigator.Pawn.HealthMax)
 					DamageInstigator.Pawn.HealDamage(default.GlitchHealAmount, DamageInstigator, class'KFDT_Healing');
+				break;
+
+			case 4: // Armor (Skill: Hex Edit)
+				if (KFPawn_Human(DamageInstigator.Pawn) != None)
+				{
+					KFPawn_Human(DamageInstigator.Pawn).Armor = Min(KFPawn_Human(DamageInstigator.Pawn).MaxArmor,
+						KFPawn_Human(DamageInstigator.Pawn).Armor + ((Helper.SkillArmorProcLevel >= 2) ? 10 : 5));
+				}
 				break;
 		}
 	}
@@ -264,7 +277,7 @@ static function ModifyDamageTaken(out int InDamage, int DefaultDamage, int upgLe
 	// Fatal damage trigger: only at Lv 20, only once per wave.
 	if (upgLevel >= 20 && !Helper.bDataMissingUsedThisWave
 		&& (OwnerPawn.Health - InDamage) <= 0
-		&& FRand() < default.DataMissingProcChance)
+		&& FRand() < default.DataMissingProcChance + Helper.SkillDataMissingChanceBonus)
 	{
 		Helper.ActivateDataMissing(KFPawn_Human(OwnerPawn), default.DataMissingInvulnDuration);
 		InDamage = 0;

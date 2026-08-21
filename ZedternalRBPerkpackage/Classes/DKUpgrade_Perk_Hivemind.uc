@@ -22,6 +22,7 @@ var config float SwarmCollectiveDuration;      // 8 seconds
 var config float SwarmDamageBonus;             // +30% damage
 var config float SwarmReloadBonus;             // +50% reload speed
 var config float SwarmMovementBonus;           // +15% movement speed
+var config float SwarmCooldownSeconds;         // recharge delay after the buff ends - kills do not count during it
 var config int MODEVERSION;
 
 static function UpdateConfig()
@@ -40,6 +41,17 @@ static function UpdateConfig()
 		default.SwarmMovementBonus = 0.15f;
 
 		default.MODEVERSION = 1;
+		static.StaticSaveConfig();
+	}
+
+	// v2: Swarm Collective cooldown. Without it, late-wave zed density
+	// refills the 20-kill counter the moment the buff ends, re-triggering
+	// roughly every 10 seconds. Kills do not count while on cooldown.
+	if (default.MODEVERSION < 2)
+	{
+		default.SwarmCooldownSeconds = 45.0f;
+
+		default.MODEVERSION = 2;
 		static.StaticSaveConfig();
 	}
 }
@@ -325,7 +337,7 @@ defaultproperties
 	upgradeDescription(1)="<font color=\"#32FF32\">Neural Efficiency:</font> <font color=\"#FFFFFF\">+%x%%</font> <font color=\"#7FFF7F\">Team Reload Speed</font> within <font color=\"#FFFFFF\">10m</font>"
 	upgradeDescription(2)="<font color=\"#32FF32\">Hive Movement:</font> <font color=\"#FFFFFF\">+1%</font> <font color=\"#7FFF7F\">Team Movement Speed</font> per <font color=\"#7FFF7F\">Symbiote evolution stage</font> (within 10m)"
 	upgradeDescription(3)="<font color=\"#8B0000\">LEVEL 10:</font> <font color=\"#FFD700\">Neural Network</font> - Teammates within <font color=\"#FFFFFF\">10m</font> gain <font color=\"#FFFFFF\">+5%</font> damage per <font color=\"#7FFF7F\">Symbiote evolution stage</font> (max <font color=\"#FFFFFF\">+50%</font>)"
-	upgradeDescription(4)="<font color=\"#8B0000\">LEVEL 20:</font> <font color=\"#FFD700\">Swarm Collective</font> - Every <font color=\"#FFFFFF\">20</font> kills triggers a team-wide buff: <font color=\"#FFFFFF\">+30%</font> Damage, <font color=\"#FFFFFF\">+50%</font> Reload Speed, <font color=\"#FFFFFF\">+15%</font> Movement Speed for <font color=\"#FFFFFF\">8 seconds</font>"
+	upgradeDescription(4)="<font color=\"#8B0000\">LEVEL 20:</font> <font color=\"#FFD700\">Swarm Collective</font> - Every <font color=\"#FFFFFF\">20</font> kills triggers a team-wide buff: <font color=\"#FFFFFF\">+30%</font> Damage, <font color=\"#FFFFFF\">+50%</font> Reload Speed, <font color=\"#FFFFFF\">+15%</font> Movement Speed for <font color=\"#FFFFFF\">8 seconds</font> (<font color=\"#be4d25\">45s</font> recharge)"
 	
 	// Icon references (21 total: Rank_0 through Rank_20)
 	UpgradeIcon(0)=Texture2D'ZedternalRBPerkpackage_Resources.Perks.UI_Perk_Hivemind_Legacy_Rank_0'

@@ -14,8 +14,9 @@ var byte TotalProgressToNextMilestone;     // Kills toward next Absolute Zero (0
 var bool bIcicleArrowReady;            // Level 10 ready flag
 var bool bAbsoluteZeroReady;           // Level 20 ready flag
 
-var const byte MaxHeadshotKills;       // Maximum headshot kills to display (10)
-var const byte MaxTotalKills;          // Maximum total kills to display (20)
+// Milestone thresholds are config-driven:
+// [ZedternalRBPerkpackage.DKUpgrade_Perk_Cryophilite]
+// HeadshotKillsRequired / TotalKillsRequired
 var const float KillDisplayDuration;   // How long to show kill count after last kill
 
 // Sound events for feedback
@@ -124,13 +125,13 @@ function TrackKill(bool bIsHeadshot, optional KFPawn_Monster KilledMonster, opti
     if (!bAbsoluteZeroReady && CurrentUpgradeLevel >= class'DKConfig_Capstone'.default.Capstone_Rank2Level)
     {
         TotalProgressToNextMilestone++;
-        TotalKillsToDisplay = Min(TotalProgressToNextMilestone, MaxTotalKills);
+        TotalKillsToDisplay = Min(TotalProgressToNextMilestone, class'DKUpgrade_Perk_Cryophilite'.default.TotalKillsRequired);
     }
     
     if (bIsHeadshot && !bIcicleArrowReady && CurrentUpgradeLevel >= class'DKConfig_Capstone'.default.Capstone_Rank1Level)
     {
         HeadshotProgressToNextMilestone++;
-        HeadshotKillsToDisplay = Min(HeadshotProgressToNextMilestone, MaxHeadshotKills);
+        HeadshotKillsToDisplay = Min(HeadshotProgressToNextMilestone, class'DKUpgrade_Perk_Cryophilite'.default.HeadshotKillsRequired);
     }
     
     // Check for milestone readiness
@@ -152,7 +153,7 @@ function CheckMilestoneReadiness(optional int CurrentUpgradeLevel = 1)
     bWasAbsoluteReady = bAbsoluteZeroReady;
     
     // Check Level 10: Icicle Arrow (when progress reaches 10 AND level is 10+)
-    if (!bIcicleArrowReady && HeadshotProgressToNextMilestone >= MaxHeadshotKills && CurrentUpgradeLevel >= class'DKConfig_Capstone'.default.Capstone_Rank1Level)
+    if (!bIcicleArrowReady && HeadshotProgressToNextMilestone >= class'DKUpgrade_Perk_Cryophilite'.default.HeadshotKillsRequired && CurrentUpgradeLevel >= class'DKConfig_Capstone'.default.Capstone_Rank1Level)
     {
         bIcicleArrowReady = True;
         if (!bWasIcicleReady)
@@ -162,7 +163,7 @@ function CheckMilestoneReadiness(optional int CurrentUpgradeLevel = 1)
     }
     
     // Check Level 20: Absolute Zero (when progress reaches 20 AND level is 20)
-    if (!bAbsoluteZeroReady && TotalProgressToNextMilestone >= MaxTotalKills && CurrentUpgradeLevel >= class'DKConfig_Capstone'.default.Capstone_Rank2Level)
+    if (!bAbsoluteZeroReady && TotalProgressToNextMilestone >= class'DKUpgrade_Perk_Cryophilite'.default.TotalKillsRequired && CurrentUpgradeLevel >= class'DKConfig_Capstone'.default.Capstone_Rank2Level)
     {
         bAbsoluteZeroReady = True;
         if (!bWasAbsoluteReady)
@@ -262,7 +263,7 @@ reliable client function UpdateKillDisplay(byte HeadshotKills, byte TotalKillsDi
     else if (KFPC.MyGFxHUD != None)
     {
         // Fallback: Use standard rhythm counter if custom HUD not available
-        KFPC.UpdateRhythmCounterWidget(TotalKillsDisplay, MaxTotalKills);
+        KFPC.UpdateRhythmCounterWidget(TotalKillsDisplay, class'DKUpgrade_Perk_Cryophilite'.default.TotalKillsRequired);
     }
 
     // Play appropriate sound effects for feedback
@@ -286,8 +287,6 @@ defaultproperties
     bIcicleArrowReady=false
     bAbsoluteZeroReady=false
     
-    MaxHeadshotKills=10            // Track headshot kills up to 10
-    MaxTotalKills=20               // Track total kills up to 20
     KillDisplayDuration=5.0f       // Show kill counters for 5 seconds after last kill
     
     // IMPROVED DEDUPLICATION SETTINGS

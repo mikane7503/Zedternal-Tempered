@@ -52,16 +52,19 @@ function AddVenomStack(int SkillLevel)
     KFPC = KFPlayerController(Player.Controller);
     if (KFPC == None) return;
     
-    // Determine max stacks based on skill level
+    // Determine max stacks based on skill level. Config-driven:
+    // [ZedternalRBPerkpackage.DKUpgrade_Skill_VenomExtraction] MaxStacks /
+    // DamageBonus (index 0 = standard, 1 = deluxe). DamagePerStack is the
+    // display percentage of the config bonus so the popup never lies.
     if (SkillLevel == 1)
     {
-        MaxStacks = 1;
-        DamagePerStack = 10.0f;
+        MaxStacks = class'DKUpgrade_Skill_VenomExtraction'.default.MaxStacks[0];
+        DamagePerStack = class'DKUpgrade_Skill_VenomExtraction'.default.DamageBonus[0] * 100.0f;
     }
     else
     {
-        MaxStacks = 5;
-        DamagePerStack = 20.0f;
+        MaxStacks = class'DKUpgrade_Skill_VenomExtraction'.default.MaxStacks[1];
+        DamagePerStack = class'DKUpgrade_Skill_VenomExtraction'.default.DamageBonus[1] * 100.0f;
     }
     
     // Add stack (capped at max)

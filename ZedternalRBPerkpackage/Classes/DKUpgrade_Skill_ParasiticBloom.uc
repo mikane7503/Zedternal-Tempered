@@ -7,6 +7,11 @@
 // Normal: Killing a large zed heals all teammates within 10m for 20 HP
 // Deluxe: Killing a large zed heals all teammates within 10m for 35 HP
 //         and restores 10 armor
+//
+// BUGFIX: Armor is granted via KFPH.AddArmor() so it goes through the
+// WMPawn_Human override into the real ZR armor pool (ZedternalArmor).
+// Writing KFPH.Armor directly only poked the vanilla display byte,
+// which ZR recomputes from ZedternalArmor and immediately wipes.
 // ===================================================================
 class DKUpgrade_Skill_ParasiticBloom extends DKUpgrade_Skill
 	config(ZedternalUnlimited);
@@ -60,10 +65,12 @@ static function ModifyDamageGiven(out int InDamage, int DefaultDamage, int upgLe
 		// Heal the teammate
 		KFPH.HealDamage(default.HealAmount[upgLevel - 1], DamageInstigator, class'KFDT_Healing');
 
-		// Deluxe: also restore armor
-		if (upgLevel > 1 && KFPH.Armor < KFPH.MaxArmor)
+		// Deluxe: also restore armor. AddArmor virtual-dispatches into the
+		// WMPawn_Human override, which adds to ZedternalArmor, clamps to
+		// ZedternalMaxArmor and syncs the HUD display value.
+		if (upgLevel > 1)
 		{
-			KFPH.Armor = Min(KFPH.Armor + default.DeluxeArmorAmount, KFPH.MaxArmor);
+			KFPH.AddArmor(default.DeluxeArmorAmount);
 		}
 	}
 }

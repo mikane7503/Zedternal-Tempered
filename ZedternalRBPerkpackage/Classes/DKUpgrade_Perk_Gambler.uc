@@ -1,7 +1,6 @@
 Class DKUpgrade_Perk_Gambler extends DKUpgrade_Perk
 	config(ZedternalUnlimited);
 
-var config int Doodle;
 var config float Chance;
 var config int Dosh;
 var config int MODEVERSION;
@@ -10,11 +9,21 @@ static function UpdateConfig()
 {
 	if (default.MODEVERSION < 1)
 	{
-		default.Doodle = 25;
 		default.Chance = 0.01f;
 		default.Dosh = 2;
 
 		default.MODEVERSION = 1;
+		static.StaticSaveConfig();
+	}
+
+	// v2: retire the misnamed 'Doodle' var. The per-wave dosh award now reads
+	// 'Dosh' (the name every server owner tried to edit); re-seed it to the
+	// live value Doodle used to hold.
+	if (default.MODEVERSION < 2)
+	{
+		default.Dosh = 25;
+
+		default.MODEVERSION = 2;
 		static.StaticSaveConfig();
 	}
 }
@@ -24,7 +33,7 @@ static function WaveEnd(int upgLevel, KFPlayerController KFPC)
 {
     if(KFPC != none)
     {
-        KFPlayerReplicationInfo(KFPC.PlayerReplicationInfo).AddDosh(default.Doodle * upgLevel);
+        KFPlayerReplicationInfo(KFPC.PlayerReplicationInfo).AddDosh(default.Dosh * upgLevel);
     }
 }
 

@@ -59,6 +59,20 @@ var private float DKPassiveTightChoke_256Plus;
 var private float DKPassivePenetration_256Plus;
 
 // ===================================================================
+// CAMERA SHAKE IMMUNITY CACHE
+// ImmuneToCameraShake walks every purchased perk, equipment and skill
+// entry (up to ~2300 iterations late-game) and is invoked once per
+// explosion camera effect. Chained explosion bursts (crawler suicide
+// swarms, CrawlerKing) execute enough iterations inside one script
+// entry to trip the engine's 1M runaway loop limit and hard-crash the
+// client. The result only changes when purchases change, so it is
+// cached with a short TTL instead of recomputed per explosion.
+// ===================================================================
+var transient float DKCameraShakeImmunityCacheTime;
+var transient bool bDKCameraShakeImmunityCached;
+var transient bool bDKCameraShakeImmunityValue;
+
+// ===================================================================
 // ROGUELIKE STAT ACCESS
 // ===================================================================
 
@@ -1128,7 +1142,14 @@ function ModifyDamageTaken(out int InDamage, optional class<DamageType> DamageTy
     }
 
     // === PLAYERCAPS: floor on incoming damage (caps max damage resistance) ===
-    DKCapMinScaleInt(InDamage, OrigInDamage, class'DKConfig_PlayerCaps'.static.GetCapDamageTakenMinScale());
+    // Only applied when damage is still nonzero. A hard zero means an
+    // immunity fired (Bring The Heat fire immunity, grenade immunities,
+    // special wave god mode, etc.) - the floor exists to cap stacked
+    // percentage RESISTANCES, not to undo full immunities.
+    if (InDamage > 0)
+    {
+        DKCapMinScaleInt(InDamage, OrigInDamage, class'DKConfig_PlayerCaps'.static.GetCapDamageTakenMinScale());
+    }
 
     // === DR. JEKYLL & MR. HYDE: flat final reduction while transformed ===
     // Applied as the very last step so it is "10% less FINAL damage" -- after
@@ -2539,7 +2560,20 @@ simulated function bool ImmuneToCameraShake()
     local WMGameReplicationInfo WMGRI;
     local int i, idx;
 
-    if (Super.ImmuneToCameraShake()) return True;
+    // Serve from cache while fresh (0.5s TTL). Prevents the runaway loop
+    // crash when explosion bursts query this hundreds of times per frame.
+    if (bDKCameraShakeImmunityCached && WorldInfo.TimeSeconds - DKCameraShakeImmunityCacheTime < 0.5f)
+        return bDKCameraShakeImmunityValue;
+
+    bDKCameraShakeImmunityCached = True;
+    DKCameraShakeImmunityCacheTime = WorldInfo.TimeSeconds;
+    bDKCameraShakeImmunityValue = False;
+
+    if (Super.ImmuneToCameraShake())
+    {
+        bDKCameraShakeImmunityValue = True;
+        return True;
+    }
 
     DKPRI = GetDKPRISimulated();
     if (DKPRI == None) return False;
@@ -2554,7 +2588,10 @@ simulated function bool ImmuneToCameraShake()
         if (WMGRI.PerkUpgradesList[idx].PerkUpgrade == None) continue;
 
         if (WMGRI.PerkUpgradesList[idx].PerkUpgrade.static.ImmuneToCameraShake(DKPRI.GetPerkLevel(idx), OwnerPawn))
+        {
+            bDKCameraShakeImmunityValue = True;
             return True;
+        }
     }
 
     return False;

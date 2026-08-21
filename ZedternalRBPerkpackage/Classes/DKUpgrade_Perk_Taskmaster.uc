@@ -15,6 +15,7 @@ var config float StumblePower;
 var config float StunPower;
 var config float Speed;
 var config float Spread;
+var config float WeaponSwitchSpeed;
 var config int MODEVERSION;
 
 static function UpdateConfig()
@@ -37,6 +38,17 @@ static function UpdateConfig()
 		default.Spread = 0.050000;
 
 		default.MODEVERSION = 1;
+		static.StaticSaveConfig();
+	}
+
+	if (default.MODEVERSION < 2)
+	{
+		// The weapon switch bonus previously read the config var named
+		// "Speed", which reads like movement speed in the INI. It now has
+		// a properly named var; migrate the old value.
+		default.WeaponSwitchSpeed = default.Speed;
+
+		default.MODEVERSION = 2;
 		static.StaticSaveConfig();
 	}
 }
@@ -113,7 +125,10 @@ static function ModifyStunPower( out float InStunPower, float DefaultStunPower, 
 
 static simulated function ModifyWeaponSwitchTime(out float InSwitchTime, float DefaultSwitchTime, int upgLevel, KFWeapon KFW)
 {
-	InSwitchTime = DefaultSwitchTime / (DefaultSwitchTime/InSwitchTime + default.Speed * upgLevel);
+	if (InSwitchTime > 0.0f)
+	{
+		InSwitchTime = DefaultSwitchTime / (DefaultSwitchTime/InSwitchTime + default.WeaponSwitchSpeed * upgLevel);
+	}
 }
 
 static simulated function ModifyTightChokePassive( out float tightChokeFactor, int upgLevel)

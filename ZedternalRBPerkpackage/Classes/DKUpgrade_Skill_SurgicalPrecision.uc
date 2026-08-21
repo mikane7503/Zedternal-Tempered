@@ -34,7 +34,7 @@ defaultproperties
 
     UpgradeName="Surgical Precision"
 	upgradeDescription(0)="When using Iron Sights, increase <font color=\"#ff3399\">Damage</font> with all weapons by <font color=\"#66cc00\">20%</font>."
-    upgradeDescription(1)="When using Iron Sights, increase <font color=\"#ff3399\">Damage</font> with all weapons by <font color=\"#66cc00\">20%</font>."
+    upgradeDescription(1)="When using Iron Sights, increase <font color=\"#ff3399\">Damage</font> with all weapons by <font color=\"#66cc00\">50%</font>."
 	UpgradeIcon(0)=Texture2D'ZedternalRBPerkpackage_Resources.Skills.UI_Skill_SurgicalPrecision'
 	UpgradeIcon(1)=Texture2D'ZedternalRBPerkpackage_Resources.Skills.UI_Skill_SurgicalPrecision_Deluxe'
     Name="Default__DKUpgrade_Skill_SurgicalPrecision"

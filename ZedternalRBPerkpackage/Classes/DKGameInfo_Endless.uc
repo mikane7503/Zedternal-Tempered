@@ -104,6 +104,13 @@ event InitGame(string Options, out string ErrorMessage)
     // Swap external upgrade class paths to DK wrappers BEFORE super loads them
     class'DKConfig_WrapperSwap'.static.SwapAll();
 
+    // Rewrite renamed DK skill paths in the ZR skill registry BEFORE super
+    // builds it (DeadEye -> EagleEye, QuickDraw -> FastHands). Idempotent:
+    // only saves when an old path was actually found, so servers self-heal
+    // on first boot of the renamed build and the pass is a no-op afterwards.
+    // MIRRORED in DKGameInfo_Endless_AllWeapons.
+    MigrateRenamedSkillPaths();
+
     Super.InitGame(Options, ErrorMessage);
     
     `log("[DKGameInfo] Initializing DK Zedternal Reborn Extension");
@@ -197,6 +204,37 @@ event InitGame(string Options, out string ErrorMessage)
     else
     {
         `log("[DKGameInfo] ERROR: Failed to create PerkFilterConfig!");
+    }
+}
+
+// Rewrites SkillPath entries that still point at pre-rename DK skill
+// classes (DeadEye -> EagleEye, QuickDraw -> FastHands). Idempotent:
+// scan-and-replace, save only when something changed. Runs from InitGame
+// BEFORE Super so ZR's registry build only ever sees the new paths.
+// MIRRORED in DKGameInfo_Endless_AllWeapons.
+function MigrateRenamedSkillPaths()
+{
+    local int i;
+    local bool bChanged;
+
+    for (i = 0; i < class'ZedternalReborn.Config_SkillUpgrade'.default.SkillUpgrade_Upgrade.Length; ++i)
+    {
+        if (class'ZedternalReborn.Config_SkillUpgrade'.default.SkillUpgrade_Upgrade[i].SkillPath ~= "ZedternalRBPerkpackage.DKUpgrade_Skill_DeadEye")
+        {
+            class'ZedternalReborn.Config_SkillUpgrade'.default.SkillUpgrade_Upgrade[i].SkillPath = "ZedternalRBPerkpackage.DKUpgrade_Skill_EagleEye";
+            bChanged = true;
+        }
+        else if (class'ZedternalReborn.Config_SkillUpgrade'.default.SkillUpgrade_Upgrade[i].SkillPath ~= "ZedternalRBPerkpackage.DKUpgrade_Skill_QuickDraw")
+        {
+            class'ZedternalReborn.Config_SkillUpgrade'.default.SkillUpgrade_Upgrade[i].SkillPath = "ZedternalRBPerkpackage.DKUpgrade_Skill_FastHands";
+            bChanged = true;
+        }
+    }
+
+    if (bChanged)
+    {
+        class'ZedternalReborn.Config_SkillUpgrade'.static.StaticSaveConfig();
+        `log("[DK_MIGRATE] Rewrote renamed skill paths (DeadEye->EagleEye / QuickDraw->FastHands) in Config_SkillUpgrade");
     }
 }
 
@@ -2178,10 +2216,53 @@ function ReduceDamage(out int Damage, Pawn Injured, Controller InstigatedBy, vec
     local int AmogusDmg;
     local DKPlayerController PossessorDealerPC;
     local DKUpgrade_Perk_Possessor_Helper PossessorDmgHelper;
+    local DKFastball_PayloadMarker FastballMarker;
+    local DKWish_Buff WishBuff;
 
     PreSuperDamage = Damage;
 
     Super.ReduceDamage(Damage, Injured, InstigatedBy, HitLocation, Momentum, DamageType, DamageCauser, HitInfo);
+
+    // FASTBALL: a launched teammate takes no falling damage for the
+    // duration of the flight (marker present). MIRRORED in
+    // DKGameInfo_Endless / DKGameInfo_Endless_AllWeapons.
+    if (Damage > 0 && ClassIsChildOf(DamageType, class'KFDT_Falling') && KFPawn_Human(Injured) != None)
+    {
+        foreach Injured.ChildActors(class'DKFastball_PayloadMarker', FastballMarker)
+        {
+            Damage = 0;
+            break;
+        }
+    }
+
+    // WISHMASTER: consume Guardian Angel / corrupted first-hit charges on
+    // the victim's DKWish_Buff carrier. MIRRORED in
+    // DKGameInfo_Endless / DKGameInfo_Endless_AllWeapons.
+    if (Damage > 0 && KFPawn_Human(Injured) != None)
+    {
+        foreach Injured.ChildActors(class'DKWish_Buff', WishBuff)
+        {
+            // Corrupted Guardian: the next hit taken is doubled.
+            if (WishBuff.CurseFirstHit > 0)
+            {
+                Damage *= 2;
+                WishBuff.CurseFirstHit = 0;
+            }
+
+            // Guardian Angel: survive the next lethal hit at 1 HP.
+            if (WishBuff.GuardianCharge > 0 && Damage >= Injured.Health)
+            {
+                Damage = Max(0, Injured.Health - 1);
+                WishBuff.GuardianCharge = 0;
+
+                if (KFPlayerController(Injured.Controller) != None)
+                    class'DKMessageManager'.static.SendMinor(KFPlayerController(Injured.Controller), "GUARDIAN ANGEL! You cheat death at 1 HP.");
+            }
+
+            WishBuff.MaybeSelfDestruct();
+            break;
+        }
+    }
 
     if (EventWaveManager != None && EventWaveManager.ActiveEventID > 0)
     {
@@ -2241,6 +2322,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
             EventWaveManager.NotifyZedKilledOITC(Killer);
             EventWaveManager.NotifyNemesisKilled(KilledPawn);
             EventWaveManager.NotifyXMenKill(Killer, KilledPawn);
+            EventWaveManager.NotifyZedKilledGeneric(Killer, KilledPawn);
         }
     }
 

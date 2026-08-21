@@ -172,7 +172,11 @@ defaultproperties
 {
 	Begin Object Class=StaticMeshComponent Name=DomeMesh
 		StaticMesh=StaticMesh'EngineMeshes.Sphere'
-		Materials(0)=Material'ZedternalRBPerkpackage_Resources.Materials.M_DomainDome'
+		// ROLLBACK: previous custom material (requires shader cook, which our
+		// pipeline cannot do for loose content upks - invisible on all machines
+		// except the dev machine). To revert, swap the two Materials(0) lines.
+		// Materials(0)=Material'ZedternalRBPerkpackage_Resources.Materials.M_DomainDome'
+		Materials(0)=Material'Env_Mat_Lib.Glass.Env_Basic_Glass_PM'
 		CollideActors=false
 		BlockActors=false
 		CastShadow=false

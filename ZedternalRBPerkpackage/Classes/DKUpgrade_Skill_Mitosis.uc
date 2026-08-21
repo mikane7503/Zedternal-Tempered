@@ -7,6 +7,18 @@
 //
 // Normal: Every 15 kills, instantly refill your current magazine
 // Deluxe: Every 10 kills, instantly refill your current magazine
+//
+// BUGFIX 1: The kill quota is no longer consumed by a no-op refill.
+// Previously the counter reset to 0 BEFORE the refill attempt, and
+// the refill silently did nothing if the magazine was full, a melee
+// weapon was held, or spare ammo was empty. With Hivemind's burst
+// kills the trigger regularly landed right after a reload and
+// evaporated. The counter now only resets when rounds actually moved;
+// otherwise the trigger is banked and retried on the next kill.
+//
+// BUGFIX 2: The threshold is refreshed on every kill, so buying the
+// deluxe tier mid-game takes effect immediately instead of being
+// locked to the value captured when the helper first spawned.
 // ===================================================================
 class DKUpgrade_Skill_Mitosis extends DKUpgrade_Skill
 	config(ZedternalUnlimited);
@@ -32,12 +44,19 @@ static function AddVampireHealth(out int InHealth, int DefaultHealth, int upgLev
 {
 	local DKUpgrade_Skill_Mitosis_Helper UPG;
 
-	if (KFPC == None || KFPC.Pawn == None)
+	if (KFPC == None || KFPC.Pawn == None || upgLevel < 1)
 		return;
 
 	UPG = GetHelper(KFPC.Pawn, upgLevel);
 	if (UPG != None)
+	{
+		// Refresh every call so a mid-game deluxe purchase applies instantly
+		UPG.bDeluxe = (upgLevel > 1);
+		if (upgLevel - 1 < default.KillThreshold.Length)
+			UPG.KillThreshold = default.KillThreshold[upgLevel - 1];
+
 		UPG.OnKill();
+	}
 }
 
 static function DKUpgrade_Skill_Mitosis_Helper GetHelper(Pawn OwnerPawn, int upgLevel)
@@ -53,8 +72,6 @@ static function DKUpgrade_Skill_Mitosis_Helper GetHelper(Pawn OwnerPawn, int upg
 
 		// Should have one - spawn it
 		UPG = OwnerPawn.Spawn(class'DKUpgrade_Skill_Mitosis_Helper', OwnerPawn);
-		UPG.bDeluxe = (upgLevel > 1);
-		UPG.KillThreshold = default.KillThreshold[upgLevel - 1];
 	}
 
 	return UPG;

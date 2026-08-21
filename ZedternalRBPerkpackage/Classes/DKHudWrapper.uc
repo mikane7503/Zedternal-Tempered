@@ -389,6 +389,58 @@ var SpeedsterDisplayData SpeedsterDisplay;
 var bool bHideSpeedsterCard;
 
 // ===================================================================
+// Goalkeeper "Catch" card. Four states, client-animated bar:
+//   0 = Ready, 1 = Catch window (green bar draining),
+//   2 = Cooldown after a miss (orange bar draining),
+//   3 = Charge held (gold, full bar - press again to throw).
+// EndTime/Duration drive the bar locally so it animates smoothly
+// regardless of RPC cadence (same shape as Speedster/Hyde).
+// ===================================================================
+struct GoalkeeperDisplayData
+{
+    var bool  bIsActive;
+    var byte  State;       // 0 = ready, 1 = window, 2 = cooldown, 3 = charge held
+    var bool  bPerfect;    // charge held from a perfect catch
+    var float EndTime;     // local TimeSeconds when current phase ends
+    var float Duration;    // length of current phase (for the bar fraction)
+};
+var GoalkeeperDisplayData GoalkeeperDisplay;
+var bool bHideGoalkeeperCard;
+
+// ===================================================================
+// Fastball "Launch" card. Ready / cooldown, client-animated bar.
+// ===================================================================
+struct FastballDisplayData
+{
+    var bool  bIsActive;
+    var byte  State;       // 0 = ready, 2 = cooldown
+    var float EndTime;     // local TimeSeconds when cooldown ends
+    var float Duration;    // cooldown length (for the bar fraction)
+};
+var FastballDisplayData FastballDisplay;
+var bool bHideFastballCard;
+
+// ===================================================================
+// Wishmaster wish-selection card. Two-stage list menu + result flash:
+//   Stage 1 = pick wish (up to 4 rows), Stage 2 = pick target player
+//   (up to 3 rows), Stage 3 = result line flash (gold / corrupted red).
+// Server pushes row strings + highlight; card renders the list with a
+// ">" marker on the highlighted row. No bar - purely a menu card.
+// ===================================================================
+struct WishmasterDisplayData
+{
+    var bool   bIsActive;
+    var byte   Stage;         // 1 = pick wish, 2 = pick target, 3 = result
+    var byte   OptionCount;   // rows in the list (1-6)
+    var byte   Highlight;     // highlighted row index
+    var string Options[6];
+    var string ResultLine;
+    var bool   bCorrupted;    // result flash styling
+};
+var WishmasterDisplayData WishmasterDisplay;
+var bool bHideWishmasterCard;
+
+// ===================================================================
 // Possessor "Possession" perk card. Same three-state, client-animated
 // shape as Speedster: 0 = Ready (off cooldown), 1 = Possessing (timer
 // draining in real time, remaining seconds shown), 2 = Cooldown
@@ -427,6 +479,9 @@ const CARD_HYDE         = 8;
 const CARD_DOMAIN       = 9;
 const CARD_SPEEDSTER    = 10;
 const CARD_POSSESSOR    = 11;
+const CARD_GOALKEEPER   = 12;
+const CARD_FASTBALL     = 13;
+const CARD_WISHMASTER   = 14;
 
 struct DisplayCardSlot
 {
@@ -848,6 +903,24 @@ var localized string EventWave_SelfPotato;
 var localized string EventWave_SelfHighlander;
 var localized string EventWave_SelfMarked;
 
+// Minigame event wave HUD strings (batch 27-32)
+var localized string EventWave_HudBomb;
+var localized string EventWave_SelfBomb;
+var localized string EventWave_PhaseGreen;
+var localized string EventWave_PhaseWarn;
+var localized string EventWave_PhaseRed;
+var localized string EventWave_HudLavaZone;
+var localized string EventWave_HudLavaMoving;
+var localized string EventWave_HudPartner;
+var localized string EventWave_HudQuota;
+var localized string EventWave_HudTeamProgress;
+var localized string EventWave_HudGoldenZed;
+var localized string EventWave_HudGoldenDrop;
+
+// Minigame HUD: local caches so countdowns/effects survive clock differences
+var transient vector CachedEventZoneLoc;
+var transient float CachedZoneChangeTime;
+
 // --- Watcher subliminal messages ---
 var localized string Watcher_Subliminal_1;
 var localized string Watcher_Subliminal_2;
@@ -1162,7 +1235,7 @@ function InitializeAchievementPopup()
     AchievementPopup.Description = "";  // <-- ADDED: Initialize description
     AchievementPopup.AchievementIcon = None;
     AchievementPopup.DisplayTime = 0.0f;
-    AchievementPopup.MaxDisplayTime = 8.0f;
+    AchievementPopup.MaxDisplayTime = 5.0f;
     AchievementPopup.bIsActive = false;
     AchievementPopup.TitleColor = MakeColorFromRGB(255, 140, 0, 255); // Orange
     AchievementPopup.BackgroundColor = MakeColorFromRGB(0, 0, 0, 230);
@@ -3070,8 +3143,8 @@ function ShowAchievementUnlockNotification(string AchievementName, string Descri
     AchievementPopup.AchievementName = AchievementName;
     AchievementPopup.Description = Description;
     AchievementPopup.AchievementIcon = AchievementIcon;
-    AchievementPopup.DisplayTime = 8.0f;
-    AchievementPopup.MaxDisplayTime = 8.0f;
+    AchievementPopup.DisplayTime = 5.0f;
+    AchievementPopup.MaxDisplayTime = 5.0f;
     AchievementPopup.bIsActive = true;
     
     AchievementPopup.TitleColor = MakeColorFromRGB(255, 140, 0, 255);
@@ -3158,13 +3231,15 @@ function DrawAchievementUnlockPopup()
         TextAlpha *= AchievementPopup.DisplayTime;
     }
     
-    // --- Box dimensions (taller to fit description, scaled from 1080p baseline) ---
-    IconSize = 192.0f * ResScale * 0.667f * ScaleFactor;
-    BoxWidth = 860.0f * ResScale * 0.667f * ScaleFactor;
-    BoxHeight = 270.0f * ResScale * 0.667f * ScaleFactor;
+    // --- Box dimensions (compact toast: shrunk ~25% and moved to the top
+    // strip so it never blocks the combat sightline; was 860x270 at Y=0.35
+    // for 8s, which sat in the middle of the screen far too long) ---
+    IconSize = 128.0f * ResScale * 0.667f * ScaleFactor;
+    BoxWidth = 640.0f * ResScale * 0.667f * ScaleFactor;
+    BoxHeight = 190.0f * ResScale * 0.667f * ScaleFactor;
     
     BoxX = (Canvas.SizeX - BoxWidth) / 2.0f;
-    BoxY = Canvas.SizeY * 0.35f;
+    BoxY = Canvas.SizeY * 0.10f;
     
     // --- Initial burst glow (orange) ---
     if (GlowIntensity > 0.0f)
@@ -3235,8 +3310,8 @@ function DrawAchievementUnlockPopup()
     SepY = BoxY + (BoxHeight * 0.38f);
     DrawHorizontalSeparator(TextX, SepY, BoxWidth - IconSize - 100.0f * ResScale, AlphaFactor * 0.6f, 255, 140, 0);
     
-    // --- Title text (above separator, scaled) ---
-    PopupTextScale = 1.0f * ScaleFactor * ResScale;
+    // --- Title text (above separator, scaled down with the compact box) ---
+    PopupTextScale = 0.8f * ScaleFactor * ResScale;
     TitleColor.R = 255;
     TitleColor.G = 140;
     TitleColor.B = 0;
@@ -3250,8 +3325,8 @@ function DrawAchievementUnlockPopup()
     Canvas.SetPos(TextX, TextY);
     Canvas.DrawText(TitleText, true, PopupTextScale, PopupTextScale);
     
-    // --- Achievement name (below separator, scaled) ---
-    PopupTextScale = 1.2f * ScaleFactor * ResScale;
+    // --- Achievement name (below separator, scaled down with the compact box) ---
+    PopupTextScale = 0.95f * ScaleFactor * ResScale;
     NameColor.R = 255;
     NameColor.G = 255;
     NameColor.B = 255;
@@ -3269,7 +3344,7 @@ function DrawAchievementUnlockPopup()
         Canvas.StrLen(SubText, XL, YL);
         YL *= PopupTextScale;
         
-        PopupTextScale = 0.85f * ScaleFactor * ResScale;
+        PopupTextScale = 0.7f * ScaleFactor * ResScale;
         DescColor.R = 180;
         DescColor.G = 180;
         DescColor.B = 190;
@@ -4065,6 +4140,24 @@ event DrawHUD()
         {
             DrawPossessorCard();
         }
+
+        // Draw Goalkeeper catch card (in card stack)
+        if (GoalkeeperDisplay.bIsActive && !bHideGoalkeeperCard)
+        {
+            DrawGoalkeeperCard();
+        }
+
+        // Draw Fastball launch card (in card stack)
+        if (FastballDisplay.bIsActive && !bHideFastballCard)
+        {
+            DrawFastballCard();
+        }
+
+        // Draw Wishmaster wish-selection card (in card stack)
+        if (WishmasterDisplay.bIsActive && !bHideWishmasterCard)
+        {
+            DrawWishmasterCard();
+        }
         
         // Draw Artificer forge display
         if (ArtificerDisplay.bIsActive && !bHideArtificerCard)
@@ -4127,11 +4220,17 @@ event DrawHUD()
         // Rank HUD element (bottom-left, hidden when scoreboard is open)
         DrawRankHUDElement();
 
-        // Event Wave target player icon (VIP/HotPotato/Highlander/MarkedForDeath)
-        if (EventWaveOverlayID == 9 || EventWaveOverlayID == 10 || EventWaveOverlayID == 12 || EventWaveOverlayID == 18)
+        // Event Wave target player icon (VIP/HotPotato/Highlander/MarkedForDeath/PassTheBomb)
+        if (EventWaveOverlayID == 9 || EventWaveOverlayID == 10 || EventWaveOverlayID == 12 || EventWaveOverlayID == 18 || EventWaveOverlayID == 27)
         {
             DrawEventWaveTargetIcon();
             DrawEventWaveStatusIndicator();
+        }
+
+        // Minigame event HUD (RLGL phases / Lava zone / Bond partner / Bounty quota / Golden marker)
+        if (EventWaveOverlayID >= 28 && EventWaveOverlayID <= 32)
+        {
+            DrawMinigameEventHUD();
         }
 
         // Event Wave announcement banner + overlays drawn in PostRender()
@@ -4673,6 +4772,33 @@ function RebuildDisplayCardStack()
     {
         Slot.CardType = CARD_POSSESSOR;
         Slot.HeightPx = GetPossessorCardHeight();
+        Slot.DrawY = 0;
+        ActiveDisplayCards.AddItem(Slot);
+    }
+
+    // --- Priority 13: Goalkeeper catch ---
+    if (GoalkeeperDisplay.bIsActive && !bHideGoalkeeperCard)
+    {
+        Slot.CardType = CARD_GOALKEEPER;
+        Slot.HeightPx = GetGoalkeeperCardHeight();
+        Slot.DrawY = 0;
+        ActiveDisplayCards.AddItem(Slot);
+    }
+
+    // --- Priority 14: Fastball launch ---
+    if (FastballDisplay.bIsActive && !bHideFastballCard)
+    {
+        Slot.CardType = CARD_FASTBALL;
+        Slot.HeightPx = GetFastballCardHeight();
+        Slot.DrawY = 0;
+        ActiveDisplayCards.AddItem(Slot);
+    }
+
+    // --- Priority 15: Wishmaster wish selection ---
+    if (WishmasterDisplay.bIsActive && !bHideWishmasterCard)
+    {
+        Slot.CardType = CARD_WISHMASTER;
+        Slot.HeightPx = GetWishmasterCardHeight();
         Slot.DrawY = 0;
         ActiveDisplayCards.AddItem(Slot);
     }
@@ -12903,6 +13029,7 @@ function DrawEventWaveTargetIcon()
     {
         case 9:  Label = EventWave_TargetVIP; LabelColor = MakeColor(255, 215, 0, 255); break;
         case 10: Label = "!!!"; LabelColor = MakeColor(255, 100, 30, 255); break;
+        case 27: Label = "[BOMB]"; LabelColor = MakeColor(255, 120, 0, 255); break;
         case 12: Label = EventWave_TargetActive; LabelColor = MakeColor(200, 170, 50, 255); break;
         case 18: Label = EventWave_TargetMarked; LabelColor = MakeColor(255, 50, 50, 255); break;
         default: return;
@@ -12950,6 +13077,7 @@ function DrawEventWaveStatusIndicator()
     {
         case 9:  EventLabel = EventWave_HudVIP;        EventCol = MakeColor(255, 215, 0, 255);  break;
         case 10: EventLabel = EventWave_HudPotato;     EventCol = MakeColor(255, 100, 30, 255); break;
+        case 27: EventLabel = EventWave_HudBomb;       EventCol = MakeColor(255, 120, 0, 255);  break;
         case 12: EventLabel = EventWave_HudHighlander; EventCol = MakeColor(200, 170, 50, 255); break;
         case 18: EventLabel = EventWave_HudMarked;     EventCol = MakeColor(255, 50, 50, 255);  break;
         default: return;
@@ -13005,6 +13133,7 @@ function DrawEventWaveStatusIndicator()
         {
             case 9:  SelfLine = EventWave_SelfVIP;        SelfCol = MakeColor(255, 215, 0, 255);  break;
             case 10: SelfLine = EventWave_SelfPotato;     SelfCol = MakeColor(255, 100, 30, 255); break;
+            case 27: SelfLine = EventWave_SelfBomb;       SelfCol = MakeColor(255, 120, 0, 255);  break;
             case 12: SelfLine = EventWave_SelfHighlander; SelfCol = MakeColor(200, 170, 50, 255); break;
             case 18: SelfLine = EventWave_SelfMarked;     SelfCol = MakeColor(255, 50, 50, 255);  break;
             default: return;
@@ -13028,6 +13157,240 @@ function DrawEventWaveStatusIndicator()
 }
 
 // ===================================================================
+// MINIGAME EVENT HUD (batch 27-32, IDs 28-32 drawn here)
+// 28 RLGL: phase banner + red screen edges during red light
+// 29 Lava: projected zone marker + distance + relocate countdown
+// 30 Bond: partner name reminder
+// 31 Bounty: personal quota + team completion
+// 32 Golden: marker on the golden zed / dropped trophy
+// ===================================================================
+
+function DrawMinigameEventHUD()
+{
+    local DKGameReplicationInfo DKGRI;
+    local DKPlayerController DKPC;
+    local vector ScreenPos, WorldPos, CamLoc;
+    local rotator CamRot;
+    local string Line, Line2;
+    local Color Col;
+    local float NTS, X, Y, LineW, LineH, BoxW, BoxH, PadX, PadY, Dist;
+    local int Remaining;
+    local bool bInFront;
+
+    DKGRI = DKGameReplicationInfo(KFGRI);
+    if (DKGRI == None)
+        return;
+
+    DKPC = DKPlayerController(PlayerOwner);
+    NTS = ResScale;
+    PadX = 10.0f * NTS;
+    PadY = 5.0f * NTS;
+    Canvas.Font = class'KFGameEngine'.Static.GetKFCanvasFont();
+
+    // Stamp the local time whenever the replicated zone location changes
+    // (drives the Lava relocate countdown without trusting server clocks)
+    if (DKGRI.EventZoneLoc != CachedEventZoneLoc)
+    {
+        CachedEventZoneLoc = DKGRI.EventZoneLoc;
+        CachedZoneChangeTime = WorldInfo.TimeSeconds;
+    }
+
+    switch (EventWaveOverlayID)
+    {
+        case 28: // RED LIGHT, GREEN LIGHT - phase banner + red edges
+            switch (DKGRI.EventPhase)
+            {
+                case 0: Line = EventWave_PhaseGreen; Col = MakeColor(60, 220, 80, 255); break;
+                case 1: Line = EventWave_PhaseWarn;  Col = MakeColor(255, 200, 40, 255); break;
+                case 2: Line = EventWave_PhaseRed;   Col = MakeColor(255, 50, 50, 255); break;
+                default: return;
+            }
+
+            if (DKGRI.EventPhase == 2)
+            {
+                class'DKEventWave'.static.DrawEdgeVignette(Canvas, Canvas.SizeX, Canvas.SizeY, EventWaveAlpha, 255, 20, 20, 120.f, 5);
+            }
+
+            Canvas.TextSize(Line, LineW, LineH, NTS * 1.1f, NTS * 1.1f);
+            BoxW = LineW + PadX * 2.0f;
+            BoxH = LineH + PadY * 2.0f;
+            X = (Canvas.SizeX - BoxW) * 0.5f;
+            Y = Canvas.SizeY * 0.16f;
+
+            Canvas.SetPos(X, Y);
+            Canvas.SetDrawColor(0, 0, 0, 180);
+            Canvas.DrawRect(BoxW, BoxH);
+            Canvas.SetPos(X, Y);
+            Canvas.SetDrawColor(Col.R, Col.G, Col.B, 230);
+            Canvas.DrawRect(BoxW, FMax(1.0f, 2.0f * NTS));
+            DrawTextWithShadow(Line, X + PadX, Y + PadY, Col, NTS * 1.1f);
+            break;
+
+        case 29: // THE FLOOR IS LAVA - zone marker + distance + countdown
+            Col = MakeColor(255, 140, 20, 255);
+
+            if (PlayerOwner != None && PlayerOwner.Pawn != None)
+                Dist = VSize2D(PlayerOwner.Pawn.Location - DKGRI.EventZoneLoc);
+
+            // World marker on the zone center (only when in front of the camera)
+            if (PlayerOwner != None)
+            {
+                PlayerOwner.GetPlayerViewPoint(CamLoc, CamRot);
+                WorldPos = DKGRI.EventZoneLoc;
+                WorldPos.Z += 120.f;
+                bInFront = (Normal(WorldPos - CamLoc) dot vector(CamRot)) > 0.f;
+                if (bInFront)
+                {
+                    ScreenPos = Canvas.Project(WorldPos);
+                    if (ScreenPos.X > 0 && ScreenPos.X < Canvas.SizeX && ScreenPos.Y > 0 && ScreenPos.Y < Canvas.SizeY)
+                    {
+                        Line2 = EventWave_HudLavaZone;
+                        Canvas.TextSize(Line2, LineW, LineH, NTS * 0.7f, NTS * 0.7f);
+                        Canvas.SetPos(ScreenPos.X - LineW * 0.5f - PadX, ScreenPos.Y - LineH * 0.5f - PadY);
+                        Canvas.SetDrawColor(0, 0, 0, 160);
+                        Canvas.DrawRect(LineW + PadX * 2.f, LineH + PadY * 2.f);
+                        DrawTextWithShadow(Line2, ScreenPos.X - LineW * 0.5f, ScreenPos.Y - LineH * 0.5f, Col, NTS * 0.7f);
+                    }
+                }
+            }
+
+            // Fixed readout: countdown + distance (+ MOVING warning)
+            if (DKGRI.EventSwapInterval > 0)
+            {
+                Remaining = int(float(DKGRI.EventSwapInterval) - (WorldInfo.TimeSeconds - CachedZoneChangeTime));
+                if (Remaining < 0)
+                    Remaining = 0;
+            }
+
+            Line = EventWave_HudLavaZone $ ": " $ int(Dist / 50.f) $ "m  (" $ Remaining $ "s)";
+            if (DKGRI.EventPhase == 1)
+            {
+                Line = EventWave_HudLavaMoving;
+                Col = MakeColor(255, 60, 60, 255);
+            }
+
+            Canvas.TextSize(Line, LineW, LineH, NTS * 0.8f, NTS * 0.8f);
+            BoxW = LineW + PadX * 2.0f;
+            BoxH = LineH + PadY * 2.0f;
+            X = (Canvas.SizeX - BoxW) * 0.5f;
+            Y = Canvas.SizeY * 0.16f;
+
+            Canvas.SetPos(X, Y);
+            Canvas.SetDrawColor(0, 0, 0, 170);
+            Canvas.DrawRect(BoxW, BoxH);
+            Canvas.SetPos(X, Y);
+            Canvas.SetDrawColor(Col.R, Col.G, Col.B, 220);
+            Canvas.DrawRect(BoxW, FMax(1.0f, 2.0f * NTS));
+            DrawTextWithShadow(Line, X + PadX, Y + PadY, Col, NTS * 0.8f);
+            break;
+
+        case 30: // BODYGUARD BOND - partner reminder
+            if (DKPC == None || DKPC.EventPartnerName == "")
+                return;
+
+            Col = MakeColor(80, 200, 255, 255);
+            Line = EventWave_HudPartner $ ": " $ DKPC.EventPartnerName;
+
+            Canvas.TextSize(Line, LineW, LineH, NTS * 0.8f, NTS * 0.8f);
+            BoxW = LineW + PadX * 2.0f;
+            BoxH = LineH + PadY * 2.0f;
+            X = (Canvas.SizeX - BoxW) * 0.5f;
+            Y = Canvas.SizeY * 0.16f;
+
+            Canvas.SetPos(X, Y);
+            Canvas.SetDrawColor(0, 0, 0, 170);
+            Canvas.DrawRect(BoxW, BoxH);
+            Canvas.SetPos(X, Y);
+            Canvas.SetDrawColor(Col.R, Col.G, Col.B, 220);
+            Canvas.DrawRect(BoxW, FMax(1.0f, 2.0f * NTS));
+            DrawTextWithShadow(Line, X + PadX, Y + PadY, Col, NTS * 0.8f);
+            break;
+
+        case 31: // BOUNTY BOARD - personal quota + team progress
+            if (DKPC == None || DKPC.EventQuotaNeeded <= 0)
+                return;
+
+            if (DKPC.EventQuotaProgress >= DKPC.EventQuotaNeeded)
+                Col = MakeColor(60, 220, 80, 255);
+            else
+                Col = MakeColor(255, 200, 60, 255);
+
+            Line = EventWave_HudQuota $ ": " $ DKPC.EventQuotaProgress $ "/" $ DKPC.EventQuotaNeeded @ DKPC.EventQuotaText;
+            Line2 = EventWave_HudTeamProgress $ ": " $ DKGRI.EventDataA $ "/" $ DKGRI.EventDataB;
+
+            Canvas.TextSize(Line, LineW, LineH, NTS * 0.8f, NTS * 0.8f);
+            BoxW = LineW + PadX * 2.0f;
+            BoxH = (LineH * 2.f) + PadY * 3.0f;
+            X = (Canvas.SizeX - BoxW) * 0.5f;
+            Y = Canvas.SizeY * 0.16f;
+
+            Canvas.SetPos(X, Y);
+            Canvas.SetDrawColor(0, 0, 0, 170);
+            Canvas.DrawRect(BoxW, BoxH);
+            Canvas.SetPos(X, Y);
+            Canvas.SetDrawColor(Col.R, Col.G, Col.B, 220);
+            Canvas.DrawRect(BoxW, FMax(1.0f, 2.0f * NTS));
+            DrawTextWithShadow(Line, X + PadX, Y + PadY, Col, NTS * 0.8f);
+            DrawTextWithShadow(Line2, X + PadX, Y + PadY * 2.f + LineH, MakeColor(220, 220, 220, 255), NTS * 0.8f);
+            break;
+
+        case 32: // GOLDEN ZED RELAY - marker on golden zed / trophy
+            if (DKGRI.EventPhase == 0)
+                return;
+
+            if (DKGRI.EventPhase == 1)
+            {
+                Line = EventWave_HudGoldenZed;
+                Col = MakeColor(255, 215, 0, 255);
+            }
+            else
+            {
+                Line = EventWave_HudGoldenDrop;
+                Col = MakeColor(255, 240, 120, 255);
+            }
+
+            if (PlayerOwner != None)
+            {
+                PlayerOwner.GetPlayerViewPoint(CamLoc, CamRot);
+                WorldPos = DKGRI.EventZoneLoc;
+                WorldPos.Z += 100.f;
+                bInFront = (Normal(WorldPos - CamLoc) dot vector(CamRot)) > 0.f;
+                if (bInFront)
+                {
+                    ScreenPos = Canvas.Project(WorldPos);
+                    if (ScreenPos.X > 0 && ScreenPos.X < Canvas.SizeX && ScreenPos.Y > 0 && ScreenPos.Y < Canvas.SizeY)
+                    {
+                        Canvas.TextSize(Line, LineW, LineH, NTS * 0.7f, NTS * 0.7f);
+                        Canvas.SetPos(ScreenPos.X - LineW * 0.5f - PadX, ScreenPos.Y - LineH * 0.5f - PadY);
+                        Canvas.SetDrawColor(0, 0, 0, 160);
+                        Canvas.DrawRect(LineW + PadX * 2.f, LineH + PadY * 2.f);
+                        DrawTextWithShadow(Line, ScreenPos.X - LineW * 0.5f, ScreenPos.Y - LineH * 0.5f, Col, NTS * 0.7f);
+                    }
+                }
+            }
+
+            // Fixed reminder line while a trophy is waiting
+            if (DKGRI.EventPhase == 2)
+            {
+                Canvas.TextSize(Line, LineW, LineH, NTS * 0.9f, NTS * 0.9f);
+                BoxW = LineW + PadX * 2.0f;
+                BoxH = LineH + PadY * 2.0f;
+                X = (Canvas.SizeX - BoxW) * 0.5f;
+                Y = Canvas.SizeY * 0.16f;
+
+                Canvas.SetPos(X, Y);
+                Canvas.SetDrawColor(0, 0, 0, 170);
+                Canvas.DrawRect(BoxW, BoxH);
+                Canvas.SetPos(X, Y);
+                Canvas.SetDrawColor(Col.R, Col.G, Col.B, 220);
+                Canvas.DrawRect(BoxW, FMax(1.0f, 2.0f * NTS));
+                DrawTextWithShadow(Line, X + PadX, Y + PadY, Col, NTS * 0.9f);
+            }
+            break;
+    }
+}
+
+// ===================================================================
 // X-MEN POWER HUD DISPLAY — Center-left of screen
 // Shows the player's assigned superpower name + description
 // ===================================================================
@@ -13038,12 +13401,23 @@ function DrawXMenPowerDisplay()
     local float XMScale, X, Y, PadX, PadY;
     local float NameW, NameH, DescW, DescH, BoxW, BoxH;
     local float NameScale, DescScale;
+    local float TimeLeft, Alpha;
 
     DKPC = DKPlayerController(GetALocalPlayerController());
     if (DKPC == None || DKPC.XMenPowerName == "")
     {
         return;
     }
+
+    // Timed notification: only draw while the display window is open, and
+    // fade out over the final 1.5 seconds. Previously this box sat on
+    // screen for the entire wave.
+    TimeLeft = DKPC.XMenPowerShowUntil - WorldInfo.TimeSeconds;
+    if (TimeLeft <= 0.0f)
+    {
+        return;
+    }
+    Alpha = FClamp(TimeLeft / 1.5f, 0.0f, 1.0f);
 
     XMScale = Canvas.SizeY / 720.0f;
     NameScale = XMScale * 1.2f;
@@ -13066,23 +13440,23 @@ function DrawXMenPowerDisplay()
 
     // Draw background
     Canvas.SetPos(X, Y);
-    Canvas.SetDrawColor(0, 0, 0, 160);
+    Canvas.SetDrawColor(0, 0, 0, byte(160.0f * Alpha));
     Canvas.DrawRect(BoxW, BoxH);
 
     // Draw gold border (top and bottom lines)
-    Canvas.SetDrawColor(255, 220, 0, 200);
+    Canvas.SetDrawColor(255, 220, 0, byte(200.0f * Alpha));
     Canvas.SetPos(X, Y);
     Canvas.DrawRect(BoxW, 2.0f * XMScale);
     Canvas.SetPos(X, Y + BoxH - 2.0f * XMScale);
     Canvas.DrawRect(BoxW, 2.0f * XMScale);
 
     // Draw power name (gold, larger)
-    Canvas.SetDrawColor(255, 220, 0, 255);
+    Canvas.SetDrawColor(255, 220, 0, byte(255.0f * Alpha));
     Canvas.SetPos(X + PadX, Y + PadY);
     Canvas.DrawText(DKPC.XMenPowerName, false, NameScale, NameScale);
 
     // Draw power description (white, smaller)
-    Canvas.SetDrawColor(220, 220, 220, 255);
+    Canvas.SetDrawColor(220, 220, 220, byte(255.0f * Alpha));
     Canvas.SetPos(X + PadX, Y + PadY + NameH + PadY * 0.5f);
     Canvas.DrawText(DKPC.XMenPowerDesc, false, DescScale, DescScale);
 }
@@ -13407,6 +13781,511 @@ function DrawPossessorCard()
 
     // State label (with the live countdown while possessing).
     DrawTextWithShadow(StateLabel, TextX, CurY, TextColor, 0.55f * ResScale);
+}
+
+// ===================================================================
+// GOALKEEPER "CATCH" CARD - Card Stack System
+//
+// Pushed from DKUpgrade_Perk_Goalkeeper_Helper via ClientGoalkeeperHUD.
+// Four states: 0 Ready / 1 Catch window / 2 Cooldown / 3 Charge held.
+// The bar animates locally off EndTime/Duration.
+// ===================================================================
+
+function UpdateGoalkeeperDisplay(byte InState, float InDuration, bool bInPerfect)
+{
+    GoalkeeperDisplay.bIsActive = True;
+    GoalkeeperDisplay.State = InState;
+    GoalkeeperDisplay.bPerfect = bInPerfect;
+    GoalkeeperDisplay.Duration = InDuration;
+    GoalkeeperDisplay.EndTime = WorldInfo.TimeSeconds + InDuration;
+}
+
+function ClearGoalkeeperDisplay()
+{
+    GoalkeeperDisplay.bIsActive = False;
+}
+
+function float GetGoalkeeperCardHeight()
+{
+    local float PadY, BarH, GapTB, GapBT, IconSz;
+    local float TitleH, LabelH, XL, TextStackH, IconStackH;
+
+    if (!GoalkeeperDisplay.bIsActive || Canvas == None)
+        return 0.0f;
+
+    PadY   = 6.0f  * ResScale;
+    BarH   = 10.0f * ResScale;
+    GapTB  = 6.0f  * ResScale;   // title -> bar
+    GapBT  = 4.0f  * ResScale;   // bar -> state label
+    IconSz = 64.0f * ResScale;
+
+    Canvas.Font = class'KFGameEngine'.Static.GetKFCanvasFont();
+    Canvas.TextSize("GOALKEEPER", XL, TitleH, 0.7f * ResScale, 0.7f * ResScale);
+    Canvas.TextSize("RECOVERING", XL, LabelH, 0.55f * ResScale, 0.55f * ResScale);
+
+    TextStackH = PadY + TitleH + GapTB + BarH + GapBT + LabelH + PadY;
+    IconStackH = IconSz + 2.0f * PadY;
+
+    return FMax(TextStackH, IconStackH);
+}
+
+function DrawGoalkeeperCard()
+{
+    local float BoxX, BoxY, BoxW, BoxH;
+    local float PadX, PadY, GapTB, GapBT, TitleH, XL;
+    local float BarX, BarW, BarH, Frac, Remaining;
+    local float CurY, TextX, IconSz, IconPad;
+    local Color AccentColor, TextColor;
+    local Texture2D Icon;
+    local string StateLabel;
+
+    if (Canvas == None || !GoalkeeperDisplay.bIsActive)
+        return;
+
+    PadX = 8.0f * ResScale;
+    PadY = 6.0f * ResScale;
+    GapTB = 6.0f * ResScale;
+    GapBT = 4.0f * ResScale;
+    IconSz = 64.0f * ResScale;
+    IconPad = 8.0f * ResScale;
+    BoxW = 280.0f * ResScale;
+    BarH = 10.0f * ResScale;
+
+    BoxX = Canvas.SizeX * DisplayCardBaseX;
+    BoxY = Canvas.SizeY * GetDisplayCardY(CARD_GOALKEEPER);
+    BoxH = GetGoalkeeperCardHeight();
+
+    // State -> accent color + label.
+    switch (GoalkeeperDisplay.State)
+    {
+        case 1: // Catch window open
+            AccentColor = MakeColorFromRGB(80, 230, 120, 255);   // green
+            StateLabel = "CATCH!";
+            break;
+        case 2: // Cooldown after a miss
+            AccentColor = MakeColorFromRGB(255, 140, 50, 255);   // orange
+            StateLabel = "RECOVERING";
+            break;
+        case 3: // Charge held
+            AccentColor = MakeColorFromRGB(255, 200, 40, 255);   // gold
+            if (GoalkeeperDisplay.bPerfect)
+                StateLabel = "PERFECT - THROW IT!";
+            else
+                StateLabel = "LOADED - THROW IT!";
+            break;
+        default: // Ready
+            AccentColor = MakeColorFromRGB(60, 200, 230, 255);   // cyan
+            StateLabel = "READY";
+            break;
+    }
+    TextColor = MakeColorFromRGB(220, 220, 220, 255);
+    TextX = BoxX + PadX + IconSz + IconPad;
+
+    Canvas.Font = class'KFGameEngine'.Static.GetKFCanvasFont();
+
+    // Background.
+    Canvas.SetDrawColor(0, 0, 0, 160);
+    Canvas.SetPos(BoxX, BoxY);
+    Canvas.DrawRect(BoxW, BoxH);
+
+    // Border (2px, accent-colored).
+    Canvas.SetDrawColor(AccentColor.R, AccentColor.G, AccentColor.B, 200);
+    Canvas.SetPos(BoxX, BoxY);                                Canvas.DrawRect(BoxW, 2.0f * ResScale);
+    Canvas.SetPos(BoxX, BoxY + BoxH - 2.0f * ResScale);      Canvas.DrawRect(BoxW, 2.0f * ResScale);
+    Canvas.SetPos(BoxX, BoxY);                                Canvas.DrawRect(2.0f * ResScale, BoxH);
+    Canvas.SetPos(BoxX + BoxW - 2.0f * ResScale, BoxY);      Canvas.DrawRect(2.0f * ResScale, BoxH);
+
+    // Icon.
+    Icon = Texture2D'ZedternalRBPerkpackage_Resources.Perks.UI_Perk_Goalkeeper_Rank_0';
+    if (Icon != None)
+    {
+        Canvas.SetDrawColor(255, 255, 255, 255);
+        Canvas.SetPos(BoxX + PadX, BoxY + (BoxH - IconSz) * 0.5f);
+        Canvas.DrawTile(Icon, IconSz, IconSz, 0, 0, Icon.SizeX, Icon.SizeY);
+    }
+
+    // Title.
+    CurY = BoxY + PadY;
+    Canvas.TextSize("GOALKEEPER", XL, TitleH, 0.7f * ResScale, 0.7f * ResScale);
+    DrawTextWithShadow("GOALKEEPER", TextX, CurY, AccentColor, 0.7f * ResScale);
+    CurY += TitleH + GapTB;
+
+    // Bar. Ready and charge-held show a full bar; window/cooldown drain.
+    BarX = TextX;
+    BarW = (BoxX + BoxW - PadX) - TextX;
+
+    if (GoalkeeperDisplay.State == 0 || GoalkeeperDisplay.State == 3)
+    {
+        Frac = 1.0f;
+    }
+    else
+    {
+        Remaining = GoalkeeperDisplay.EndTime - WorldInfo.TimeSeconds;
+        if (GoalkeeperDisplay.Duration > 0.0f)
+            Frac = FClamp(Remaining / GoalkeeperDisplay.Duration, 0.0f, 1.0f);
+        else
+            Frac = 0.0f;
+    }
+
+    Canvas.SetDrawColor(40, 40, 40, 200);
+    Canvas.SetPos(BarX, CurY);
+    Canvas.DrawRect(BarW, BarH);
+
+    Canvas.SetDrawColor(AccentColor.R, AccentColor.G, AccentColor.B, 200);
+    Canvas.SetPos(BarX, CurY);
+    Canvas.DrawRect(BarW * Frac, BarH);
+
+    CurY += BarH + GapBT;
+
+    // State label.
+    DrawTextWithShadow(StateLabel, TextX, CurY, TextColor, 0.55f * ResScale);
+}
+
+// ===================================================================
+// FASTBALL "LAUNCH" CARD - Card Stack System
+//
+// Pushed from DKUpgrade_Perk_Fastball_Helper via ClientFastballHUD.
+// Two states: 0 Ready / 2 Cooldown. The bar animates locally.
+// ===================================================================
+
+function UpdateFastballDisplay(byte InState, float InDuration)
+{
+    FastballDisplay.bIsActive = True;
+    FastballDisplay.State = InState;
+    FastballDisplay.Duration = InDuration;
+    FastballDisplay.EndTime = WorldInfo.TimeSeconds + InDuration;
+}
+
+function ClearFastballDisplay()
+{
+    FastballDisplay.bIsActive = False;
+}
+
+function float GetFastballCardHeight()
+{
+    local float PadY, BarH, GapTB, GapBT, IconSz;
+    local float TitleH, LabelH, XL, TextStackH, IconStackH;
+
+    if (!FastballDisplay.bIsActive || Canvas == None)
+        return 0.0f;
+
+    PadY   = 6.0f  * ResScale;
+    BarH   = 10.0f * ResScale;
+    GapTB  = 6.0f  * ResScale;
+    GapBT  = 4.0f  * ResScale;
+    IconSz = 64.0f * ResScale;
+
+    Canvas.Font = class'KFGameEngine'.Static.GetKFCanvasFont();
+    Canvas.TextSize("FASTBALL", XL, TitleH, 0.7f * ResScale, 0.7f * ResScale);
+    Canvas.TextSize("WINDING UP", XL, LabelH, 0.55f * ResScale, 0.55f * ResScale);
+
+    TextStackH = PadY + TitleH + GapTB + BarH + GapBT + LabelH + PadY;
+    IconStackH = IconSz + 2.0f * PadY;
+
+    return FMax(TextStackH, IconStackH);
+}
+
+function DrawFastballCard()
+{
+    local float BoxX, BoxY, BoxW, BoxH;
+    local float PadX, PadY, GapTB, GapBT, TitleH, XL;
+    local float BarX, BarW, BarH, Frac, Remaining;
+    local float CurY, TextX, IconSz, IconPad;
+    local Color AccentColor, TextColor;
+    local Texture2D Icon;
+    local string StateLabel;
+
+    if (Canvas == None || !FastballDisplay.bIsActive)
+        return;
+
+    PadX = 8.0f * ResScale;
+    PadY = 6.0f * ResScale;
+    GapTB = 6.0f * ResScale;
+    GapBT = 4.0f * ResScale;
+    IconSz = 64.0f * ResScale;
+    IconPad = 8.0f * ResScale;
+    BoxW = 280.0f * ResScale;
+    BarH = 10.0f * ResScale;
+
+    BoxX = Canvas.SizeX * DisplayCardBaseX;
+    BoxY = Canvas.SizeY * GetDisplayCardY(CARD_FASTBALL);
+    BoxH = GetFastballCardHeight();
+
+    if (FastballDisplay.State == 2)
+    {
+        AccentColor = MakeColorFromRGB(255, 140, 50, 255);   // orange
+        StateLabel = "WINDING UP";
+    }
+    else
+    {
+        AccentColor = MakeColorFromRGB(60, 200, 230, 255);   // cyan
+        StateLabel = "READY";
+    }
+    TextColor = MakeColorFromRGB(220, 220, 220, 255);
+    TextX = BoxX + PadX + IconSz + IconPad;
+
+    Canvas.Font = class'KFGameEngine'.Static.GetKFCanvasFont();
+
+    // Background.
+    Canvas.SetDrawColor(0, 0, 0, 160);
+    Canvas.SetPos(BoxX, BoxY);
+    Canvas.DrawRect(BoxW, BoxH);
+
+    // Border (2px, accent-colored).
+    Canvas.SetDrawColor(AccentColor.R, AccentColor.G, AccentColor.B, 200);
+    Canvas.SetPos(BoxX, BoxY);                                Canvas.DrawRect(BoxW, 2.0f * ResScale);
+    Canvas.SetPos(BoxX, BoxY + BoxH - 2.0f * ResScale);      Canvas.DrawRect(BoxW, 2.0f * ResScale);
+    Canvas.SetPos(BoxX, BoxY);                                Canvas.DrawRect(2.0f * ResScale, BoxH);
+    Canvas.SetPos(BoxX + BoxW - 2.0f * ResScale, BoxY);      Canvas.DrawRect(2.0f * ResScale, BoxH);
+
+    // Icon.
+    Icon = Texture2D'ZedternalRBPerkpackage_Resources.Perks.UI_Perk_Fastball_Rank_0';
+    if (Icon != None)
+    {
+        Canvas.SetDrawColor(255, 255, 255, 255);
+        Canvas.SetPos(BoxX + PadX, BoxY + (BoxH - IconSz) * 0.5f);
+        Canvas.DrawTile(Icon, IconSz, IconSz, 0, 0, Icon.SizeX, Icon.SizeY);
+    }
+
+    // Title.
+    CurY = BoxY + PadY;
+    Canvas.TextSize("FASTBALL", XL, TitleH, 0.7f * ResScale, 0.7f * ResScale);
+    DrawTextWithShadow("FASTBALL", TextX, CurY, AccentColor, 0.7f * ResScale);
+    CurY += TitleH + GapTB;
+
+    // Bar.
+    BarX = TextX;
+    BarW = (BoxX + BoxW - PadX) - TextX;
+
+    if (FastballDisplay.State == 0)
+    {
+        Frac = 1.0f;
+    }
+    else
+    {
+        Remaining = FastballDisplay.EndTime - WorldInfo.TimeSeconds;
+        if (FastballDisplay.Duration > 0.0f)
+            Frac = FClamp(Remaining / FastballDisplay.Duration, 0.0f, 1.0f);
+        else
+            Frac = 0.0f;
+    }
+
+    Canvas.SetDrawColor(40, 40, 40, 200);
+    Canvas.SetPos(BarX, CurY);
+    Canvas.DrawRect(BarW, BarH);
+
+    Canvas.SetDrawColor(AccentColor.R, AccentColor.G, AccentColor.B, 200);
+    Canvas.SetPos(BarX, CurY);
+    Canvas.DrawRect(BarW * Frac, BarH);
+
+    CurY += BarH + GapBT;
+
+    // State label.
+    DrawTextWithShadow(StateLabel, TextX, CurY, TextColor, 0.55f * ResScale);
+}
+
+// ===================================================================
+// WISHMASTER WISH-SELECTION CARD - Card Stack System
+//
+// Menu-style card: header line (stage prompt), then up to 4 option
+// rows with a ">" highlight marker, or a single result line in the
+// result-flash stage. Server owns all state; strings arrive via the
+// helper's reliable client RPC.
+// ===================================================================
+function UpdateWishmasterDisplay(byte InStage, byte InCount, byte InHighlight, string S0, string S1, string S2, string S3, string S4, string S5, string InResultLine, bool bInCorrupted)
+{
+    WishmasterDisplay.bIsActive = True;
+    WishmasterDisplay.Stage = InStage;
+    WishmasterDisplay.OptionCount = InCount;
+    WishmasterDisplay.Highlight = InHighlight;
+    WishmasterDisplay.Options[0] = S0;
+    WishmasterDisplay.Options[1] = S1;
+    WishmasterDisplay.Options[2] = S2;
+    WishmasterDisplay.Options[3] = S3;
+    WishmasterDisplay.Options[4] = S4;
+    WishmasterDisplay.Options[5] = S5;
+    WishmasterDisplay.ResultLine = InResultLine;
+    WishmasterDisplay.bCorrupted = bInCorrupted;
+}
+
+function ClearWishmasterDisplay()
+{
+    WishmasterDisplay.bIsActive = False;
+}
+
+function float GetWishmasterCardHeight()
+{
+    local float PadY, GapHR, RowGap, IconSz;
+    local float TitleH, RowH, XL, TextStackH, IconStackH;
+    local int Rows;
+
+    if (!WishmasterDisplay.bIsActive || Canvas == None)
+        return 0.0f;
+
+    PadY   = 6.0f * ResScale;
+    GapHR  = 6.0f * ResScale;   // header -> first row
+    RowGap = 3.0f * ResScale;
+    IconSz = 64.0f * ResScale;
+
+    Canvas.Font = class'KFGameEngine'.Static.GetKFCanvasFont();
+    Canvas.TextSize("WISHMASTER", XL, TitleH, 0.7f * ResScale, 0.7f * ResScale);
+    Canvas.TextSize("MAKE A WISH", XL, RowH, 0.55f * ResScale, 0.55f * ResScale);
+
+    if (WishmasterDisplay.Stage == 3)
+        Rows = 2; // prompt line + result line
+    else
+        Rows = 1 + int(WishmasterDisplay.OptionCount); // prompt + options
+
+    TextStackH = PadY + TitleH + GapHR + (RowH + RowGap) * float(Rows) + PadY;
+    IconStackH = IconSz + 2.0f * PadY;
+
+    return FMax(TextStackH, IconStackH);
+}
+
+function DrawWishmasterCard()
+{
+    local float BoxX, BoxY, BoxW, BoxH;
+    local float PadX, PadY, GapHR, RowGap, TitleH, RowH, XL;
+    local float CurY, TextX, IconSz, IconPad;
+    local float RowW, MaxTextW;
+    local Color AccentColor, TextColor, DimColor;
+    local Texture2D Icon;
+    local string Prompt, RowText;
+    local int i;
+
+    if (Canvas == None || !WishmasterDisplay.bIsActive)
+        return;
+
+    PadX = 8.0f * ResScale;
+    PadY = 6.0f * ResScale;
+    GapHR = 6.0f * ResScale;
+    RowGap = 3.0f * ResScale;
+    IconSz = 64.0f * ResScale;
+    IconPad = 8.0f * ResScale;
+
+    BoxX = Canvas.SizeX * DisplayCardBaseX;
+    BoxY = Canvas.SizeY * GetDisplayCardY(CARD_WISHMASTER);
+    BoxH = GetWishmasterCardHeight();
+
+    // Dynamic width: fit the longest line (prompt, result, or option rows
+    // with the "> " highlight prefix), floor at the standard card width.
+    Canvas.Font = class'KFGameEngine'.Static.GetKFCanvasFont();
+    MaxTextW = 0.0f;
+
+    switch (WishmasterDisplay.Stage)
+    {
+        case 2:
+            Canvas.TextSize("CHOOSE WHO RECEIVES IT", RowW, XL, 0.55f * ResScale, 0.55f * ResScale);
+            MaxTextW = FMax(MaxTextW, RowW);
+            break;
+        case 3:
+            Canvas.TextSize("THE WISH CORRUPTS!", RowW, XL, 0.55f * ResScale, 0.55f * ResScale);
+            MaxTextW = FMax(MaxTextW, RowW);
+            Canvas.TextSize(WishmasterDisplay.ResultLine, RowW, XL, 0.55f * ResScale, 0.55f * ResScale);
+            MaxTextW = FMax(MaxTextW, RowW);
+            break;
+        default:
+            Canvas.TextSize("MAKE A WISH", RowW, XL, 0.55f * ResScale, 0.55f * ResScale);
+            MaxTextW = FMax(MaxTextW, RowW);
+            break;
+    }
+
+    if (WishmasterDisplay.Stage != 3)
+    {
+        for (i = 0; i < int(WishmasterDisplay.OptionCount) && i < 6; ++i)
+        {
+            Canvas.TextSize("> " $ WishmasterDisplay.Options[i], RowW, XL, 0.55f * ResScale, 0.55f * ResScale);
+            MaxTextW = FMax(MaxTextW, RowW);
+        }
+    }
+
+    BoxW = FMax(300.0f * ResScale, PadX + IconSz + IconPad + MaxTextW + PadX);
+
+    // Stage -> accent + prompt.
+    switch (WishmasterDisplay.Stage)
+    {
+        case 2:
+            AccentColor = MakeColorFromRGB(60, 200, 230, 255);   // cyan
+            Prompt = "CHOOSE WHO RECEIVES IT";
+            break;
+        case 3:
+            if (WishmasterDisplay.bCorrupted)
+            {
+                AccentColor = MakeColorFromRGB(220, 50, 50, 255); // corrupted red
+                Prompt = "THE WISH CORRUPTS!";
+            }
+            else
+            {
+                AccentColor = MakeColorFromRGB(255, 200, 40, 255); // gold
+                Prompt = "WISH GRANTED";
+            }
+            break;
+        default: // Stage 1
+            AccentColor = MakeColorFromRGB(170, 90, 240, 255);   // arcane purple
+            Prompt = "MAKE A WISH";
+            break;
+    }
+    TextColor = MakeColorFromRGB(220, 220, 220, 255);
+    DimColor = MakeColorFromRGB(150, 150, 150, 255);
+    TextX = BoxX + PadX + IconSz + IconPad;
+
+    Canvas.Font = class'KFGameEngine'.Static.GetKFCanvasFont();
+
+    // Background.
+    Canvas.SetDrawColor(0, 0, 0, 160);
+    Canvas.SetPos(BoxX, BoxY);
+    Canvas.DrawRect(BoxW, BoxH);
+
+    // Border (2px, accent-colored).
+    Canvas.SetDrawColor(AccentColor.R, AccentColor.G, AccentColor.B, 200);
+    Canvas.SetPos(BoxX, BoxY);                                Canvas.DrawRect(BoxW, 2.0f * ResScale);
+    Canvas.SetPos(BoxX, BoxY + BoxH - 2.0f * ResScale);      Canvas.DrawRect(BoxW, 2.0f * ResScale);
+    Canvas.SetPos(BoxX, BoxY);                                Canvas.DrawRect(2.0f * ResScale, BoxH);
+    Canvas.SetPos(BoxX + BoxW - 2.0f * ResScale, BoxY);      Canvas.DrawRect(2.0f * ResScale, BoxH);
+
+    // Icon.
+    Icon = Texture2D'ZedternalRBPerkpackage_Resources.Perks.UI_Perk_Wishmaster_Rank_0';
+    if (Icon != None)
+    {
+        Canvas.SetDrawColor(255, 255, 255, 255);
+        Canvas.SetPos(BoxX + PadX, BoxY + (BoxH - IconSz) * 0.5f);
+        Canvas.DrawTile(Icon, IconSz, IconSz, 0, 0, Icon.SizeX, Icon.SizeY);
+    }
+
+    // Title.
+    CurY = BoxY + PadY;
+    Canvas.TextSize("WISHMASTER", XL, TitleH, 0.7f * ResScale, 0.7f * ResScale);
+    DrawTextWithShadow("WISHMASTER", TextX, CurY, AccentColor, 0.7f * ResScale);
+    CurY += TitleH + GapHR;
+
+    Canvas.TextSize(Prompt, XL, RowH, 0.55f * ResScale, 0.55f * ResScale);
+
+    // Prompt line.
+    DrawTextWithShadow(Prompt, TextX, CurY, AccentColor, 0.55f * ResScale);
+    CurY += RowH + RowGap;
+
+    if (WishmasterDisplay.Stage == 3)
+    {
+        // Result line.
+        DrawTextWithShadow(WishmasterDisplay.ResultLine, TextX, CurY, TextColor, 0.55f * ResScale);
+        return;
+    }
+
+    // Option rows with highlight marker.
+    for (i = 0; i < int(WishmasterDisplay.OptionCount) && i < 6; ++i)
+    {
+        if (i == int(WishmasterDisplay.Highlight))
+        {
+            RowText = "> " $ WishmasterDisplay.Options[i];
+            DrawTextWithShadow(RowText, TextX, CurY, TextColor, 0.55f * ResScale);
+        }
+        else
+        {
+            RowText = "  " $ WishmasterDisplay.Options[i];
+            DrawTextWithShadow(RowText, TextX, CurY, DimColor, 0.55f * ResScale);
+        }
+        CurY += RowH + RowGap;
+    }
 }
 
 defaultproperties

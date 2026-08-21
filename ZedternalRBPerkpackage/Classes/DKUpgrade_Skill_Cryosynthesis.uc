@@ -17,32 +17,42 @@ static function UpdateConfig()
 }
 
 
+// BUGFIX: the grant previously went through KFInventoryManager.AddGrenades,
+// which clamps to the perk's MaxGrenadeCount. Since WaveEnd fires at the
+// wave boundary when players are typically at or near max grenades (or top
+// up at the trader right after), the grant was silently absorbed by the cap
+// and never visible. The count is now written directly so the bonus stacks
+// ON TOP of the current amount, letting the player enter the next wave with
+// grenades above the normal cap. GrenadeCount is replicated, so the HUD
+// picks the change up automatically.
 static function WaveEnd(int upgLevel, KFPlayerController KFPC)
 {
 	local KFPawn Player;
 	local KFInventoryManager KFIM;
-    
+	local int NewCount;
+
 	Player = KFPawn(KFPC.Pawn);
-    KFIM = KFInventoryManager(Player.InvManager);
-    
-	if((Player != none) && Player.IsAliveAndWell())
-	{
+	if (Player == None || !Player.IsAliveAndWell())
+		return;
+
+	KFIM = KFInventoryManager(Player.InvManager);
+	if (KFIM == None)
+		return;
+
 	if (upgLevel == 1)
-	   KFIM.AddGrenades(2);
+		NewCount = int(KFIM.GrenadeCount) + 2;
 	else
-	   KFIM.AddGrenades(4);
-    }
+		NewCount = int(KFIM.GrenadeCount) + 4;
+
+	KFIM.GrenadeCount = byte(Min(255, NewCount));
 }
 
 static simulated function ModifySpareAmmoAmount(out int InSpareAmmo, int DefaultSpareAmmo, int upgLevel, KFWeapon KFW, const optional out STraderItem TraderItem, optional bool bSecondary)
 {
-    bSecondary = false;
-    // End:0x4D
-    if(!bSecondary)
-    {
-        InSpareAmmo += Round((float(DefaultSpareAmmo) * default.SpareAmmo[upgLevel - 1]));
-    }
-    //return;    
+	if (!bSecondary)
+	{
+		InSpareAmmo += Round(float(DefaultSpareAmmo) * default.SpareAmmo[upgLevel - 1]);
+	}
 }
 
 defaultproperties

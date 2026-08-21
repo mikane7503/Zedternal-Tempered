@@ -76,6 +76,13 @@ static function RegisterDefaultSounds(DKMutator Mutator)
     RegisterSound(Mutator, 'Hivemind_Collective_Activate',
         "ZedternalRBPerkpackage_Resources.Sounds.Hivemind_Collective_Activate_Cue");
     
+    // Wishmaster - wish outcome stings (granter + receiver only)
+    RegisterSound(Mutator, 'Wish_Granted',
+        "ZedternalRBPerkpackage_Resources.Sounds.Wish_Granted_Cue");
+    
+    RegisterSound(Mutator, 'Wish_Corrupted',
+        "ZedternalRBPerkpackage_Resources.Sounds.Wish_Corrupted_Cue");
+    
     // Parasite - Hemorrhage Pulse AOE life-drain
     RegisterSound(Mutator, 'Parasite_Hemorrhage_Pulse',
         "ZedternalRBPerkpackage_Resources.Sounds.Parasite_Hemorrhage_Pulse_Cue");
@@ -367,6 +374,45 @@ static function RegisterDefaultSounds(DKMutator Mutator)
         "ZedternalRBPerkpackage_Resources.Sounds.EventWave_CostumeParty_Cue");
     RegisterSound(Mutator, 'EventWave_DontBlink',
         "ZedternalRBPerkpackage_Resources.Sounds.EventWave_DontBlink_Cue");
+    RegisterSound(Mutator, 'EventWave_PassTheBomb',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventWave_PassTheBomb_Cue");
+    RegisterSound(Mutator, 'EventWave_RedLightGreenLight',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventWave_RedLightGreenLight_Cue");
+    RegisterSound(Mutator, 'EventWave_FloorIsLava',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventWave_FloorIsLava_Cue");
+    RegisterSound(Mutator, 'EventWave_BodyguardBond',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventWave_BodyguardBond_Cue");
+    RegisterSound(Mutator, 'EventWave_BountyBoard',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventWave_BountyBoard_Cue");
+    RegisterSound(Mutator, 'EventWave_GoldenZedRelay',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventWave_GoldenZedRelay_Cue");
+
+    // ===================================================================
+    // MINIGAME EVENT WAVES - in-event gameplay sounds (batch 27-32)
+    // ===================================================================
+    // Pass The Bomb
+    RegisterSound(Mutator, 'EventBomb_Transfer',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventBomb_Transfer_Cue");
+    RegisterSound(Mutator, 'EventBomb_Explode',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventBomb_Explode_Cue");
+    // Red Light Green Light
+    RegisterSound(Mutator, 'EventRLGL_Warning',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventRLGL_Warning_Cue");
+    RegisterSound(Mutator, 'EventRLGL_Red',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventRLGL_Red_Cue");
+    RegisterSound(Mutator, 'EventRLGL_Green',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventRLGL_Green_Cue");
+    // The Floor Is Lava
+    RegisterSound(Mutator, 'EventLava_Move',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventLava_Move_Cue");
+    // Bounty Board
+    RegisterSound(Mutator, 'EventBounty_Complete',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventBounty_Complete_Cue");
+    // Golden Zed Relay
+    RegisterSound(Mutator, 'EventGolden_Spawn',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventGolden_Spawn_Cue");
+    RegisterSound(Mutator, 'EventGolden_Collected',
+        "ZedternalRBPerkpackage_Resources.Sounds.EventGolden_Collected_Cue");
 
     // ===================================================================
     // MISSINGNO - Glitch Perk Sounds (3)
