@@ -41,6 +41,10 @@ $changes = foreach ($line in $nameStatus) {
     $candidates.Add($leaf)
     if ($leaf -match '^DK') { $candidates.Add(('ZT' + $leaf.Substring(2))) }
     if ($leaf -match '^Config_') { $candidates.Add(('ZTConfig_' + $leaf.Substring(7))) }
+    $aliasProperty = $manifest.classAliases.PSObject.Properties[$leaf]
+    if ($null -ne $aliasProperty) {
+        foreach ($alias in @($aliasProperty.Value)) { $candidates.Add([string]$alias) }
+    }
 
     $matches = @($candidates | Select-Object -Unique | Where-Object {
         Test-Path -LiteralPath (Join-Path $temperedClasses $_)

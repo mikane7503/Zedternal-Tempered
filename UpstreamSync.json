@@ -15,5 +15,10 @@
     "ZedternalTempered": "tempered-owned-overlay",
     "Tempered_Build": "generated-do-not-track",
     "ZedternalRBPerkpackage_Resources.upk": "release-artifact-do-not-track"
+  },
+  "classAliases": {
+    "DKUpgrade_Skill_Reaper_Helper.uc": [
+      "ZTUpgrade_Perk_Reaper_Helper.uc"
+    ]
   }
 }
