@@ -24,7 +24,7 @@ static function InitializeDefaults(out ZT_Config_Keybindings Config)
     {
         `log("ZT_Config_Keybindings: Initializing default keybindings...");
         
-        Config.DefaultKeybindings.Length = 13;
+        Config.DefaultKeybindings.Length = 17;
         
         Config.DefaultKeybindings[0].KeyName = "F1";
         Config.DefaultKeybindings[0].Command = "OpenZedternalUpgradeMenu";
@@ -78,6 +78,22 @@ static function InitializeDefaults(out ZT_Config_Keybindings Config)
         Config.DefaultKeybindings[12].Command = "PuppetHeal";
         Config.DefaultKeybindings[12].Description = "Possessed Patriarch: self-heal";
 
+        Config.DefaultKeybindings[13].KeyName = "N";
+        Config.DefaultKeybindings[13].Command = "ActivateGoalkeeper";
+        Config.DefaultKeybindings[13].Description = "Catch / Throw back (Goalkeeper perk)";
+
+        Config.DefaultKeybindings[14].KeyName = "M";
+        Config.DefaultKeybindings[14].Command = "ActivateFastball";
+        Config.DefaultKeybindings[14].Description = "Launch teammate (Fastball perk)";
+
+        Config.DefaultKeybindings[15].KeyName = "Comma";
+        Config.DefaultKeybindings[15].Command = "WishCycle";
+        Config.DefaultKeybindings[15].Description = "Cycle wish / target (Wishmaster perk)";
+
+        Config.DefaultKeybindings[16].KeyName = "Period";
+        Config.DefaultKeybindings[16].Command = "WishConfirm";
+        Config.DefaultKeybindings[16].Description = "Confirm wish / target (Wishmaster perk)";
+
         Config.SaveConfig();
         
         `log("ZT_Config_Keybindings: Default keybindings initialized and saved");
@@ -93,6 +109,10 @@ static function InitializeDefaults(out ZT_Config_Keybindings Config)
         EnsureBind(Config, "J", "PuppetMortar", "Possessed Patriarch: mortar barrage");
         EnsureBind(Config, "K", "PuppetMissile", "Possessed Patriarch: missile barrage");
         EnsureBind(Config, "P", "PuppetHeal", "Possessed Patriarch: self-heal");
+        EnsureBind(Config, "N", "ActivateGoalkeeper", "Catch / Throw back (Goalkeeper perk)");
+        EnsureBind(Config, "M", "ActivateFastball", "Launch teammate (Fastball perk)");
+        EnsureBind(Config, "Comma", "WishCycle", "Cycle wish / target (Wishmaster perk)");
+        EnsureBind(Config, "Period", "WishConfirm", "Confirm wish / target (Wishmaster perk)");
         Config.SaveConfig();
         `log("ZT_Config_Keybindings: Migration pass complete (ensured default binds)");
     }

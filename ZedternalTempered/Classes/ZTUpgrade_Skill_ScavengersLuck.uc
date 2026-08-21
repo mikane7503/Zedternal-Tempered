@@ -98,7 +98,10 @@ static simulated function ModifyRateOfFire(out float InRate, float DefaultRate, 
 	{
 		if (Helper.bActive)
 		{
-			InRate += DefaultRate * default.FireRateBonus[upgLevel - 1];
+			// BUGFIX: InRate is the fire INTERVAL (smaller = faster). The old
+			// += INCREASED it, so activating the ability made you shoot 30/50%
+			// SLOWER. Composed like ZR's WMUpgrade_Weapon_RateOfFire.
+			InRate = DefaultRate / (DefaultRate / InRate + default.FireRateBonus[upgLevel - 1]);
 		}
 		break;
 	}

@@ -33,6 +33,50 @@ static function UpdateConfig()
 }
 
 
+// Fire damage bonus while Inferno is recharging (Deluxe). Implements the
+// described mechanic: after casting, all fire-type damage the player deals
+// is boosted for the duration of the cooldown. Bonus values are
+// config-driven ([ZedternalTempered.ZTUpgrade_Skill_Inferno]
+// FireDamageBonuses, index 0 = standard, 1 = deluxe; standard seeds 0.0).
+static function ModifyDamageGiven(out int InDamage, int DefaultDamage, int upgLevel, optional Actor DamageCauser, optional KFPawn_Monster MyKFPM, optional KFPlayerController DamageInstigator, optional class<KFDamageType> DamageType, optional int HitZoneIdx, optional KFWeapon MyKFW)
+{
+	local ZTUpgrade_Skill_Inferno_Helper Helper;
+	local float Bonus;
+	
+	if (DamageInstigator == None || DamageInstigator.Pawn == None || DamageType == None)
+		return;
+	
+	if (!ClassIsChildOf(DamageType, class'KFDT_Fire'))
+		return;
+	
+	Bonus = default.FireDamageBonuses[Clamp(upgLevel, 1, default.FireDamageBonuses.Length) - 1];
+	if (Bonus <= 0.0f)
+		return;
+	
+	Helper = GetHelper(DamageInstigator.Pawn);
+	if (Helper != None && Helper.bOnCooldown)
+	{
+		InDamage += Round(float(DefaultDamage) * Bonus);
+	}
+}
+
+// Find the existing helper on a pawn (no spawn - the helper only exists
+// while the skill is owned and registered).
+static function ZTUpgrade_Skill_Inferno_Helper GetHelper(Pawn OwnerPawn)
+{
+	local ZTUpgrade_Skill_Inferno_Helper Helper;
+	
+	if (OwnerPawn != None)
+	{
+		foreach OwnerPawn.ChildActors(class'ZTUpgrade_Skill_Inferno_Helper', Helper)
+		{
+			return Helper;
+		}
+	}
+	
+	return None;
+}
+
 // Called when skill is purchased - spawn the helper
 static simulated function InitiateWeapon(int upgLevel, KFWeapon KFW, KFPawn OwnerPawn)
 {

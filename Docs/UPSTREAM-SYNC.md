@@ -25,6 +25,11 @@ release artifacts, not merge inputs.
 `temperedBaseCommit` only after an Unlimited update has been fully ported and
 verified, not merely fetched or merged into the reference tree.
 
+Classes listed in `ignoredUpstreamClasses` were deliberately removed or
+replaced by Tempered and are excluded from review. Do not alias a similarly
+named Tempered class unless it is genuinely the same gameplay class; the
+upstream Reaper skill helper and Tempered Reaper perk helper are unrelated.
+
 For later updates, `Tools/Start-UpstreamIntegration.ps1` performs steps 1-3 in
 an isolated branch. It never builds or deploys the game. Use
 `Build-Deploy-Tempered.ps1 -SkipDeploy` for a compile-only gate.

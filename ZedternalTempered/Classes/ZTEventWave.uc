@@ -15,8 +15,8 @@
 // ===================================================================
 class ZTEventWave extends Object;
 
-var const Texture2D EventIcons[27];
-var const Color EventColors[27];
+var const Texture2D EventIcons[33];
+var const Color EventColors[33];
 
 static function DrawOverlay(Canvas C, byte EventID, float Alpha, float WaveElapsedTime)
 {
@@ -78,7 +78,7 @@ static function DrawEdgeVignette(Canvas C, float W, float H, float Alpha,
 
 // ===================================================================
 // CORNER SHADOW HELPER
-// Draws darkened corners only — 4 small triangular-ish regions.
+// Draws darkened corners only ? 4 small triangular-ish regions.
 // Canvas can't do real triangles, so we approximate with small rects.
 // ===================================================================
 
@@ -118,7 +118,7 @@ static function DrawCornerShadows(Canvas C, float W, float H, float Alpha,
 }
 
 // ===================================================================
-// 7. ISOLATION — Lonely cold feel, edge darkening only
+// 7. ISOLATION ? Lonely cold feel, edge darkening only
 // ===================================================================
 
 static function DrawIsolation(Canvas C, float Alpha, float Time)
@@ -138,7 +138,7 @@ static function DrawIsolation(Canvas C, float Alpha, float Time)
 }
 
 // ===================================================================
-// 8. BLACKOUT PULSE — Full black for 2s every 20s
+// 8. BLACKOUT PULSE ? Full black for 2s every 20s
 // ===================================================================
 
 static function DrawBlackoutPulse(Canvas C, float Alpha, float Time)
@@ -170,7 +170,7 @@ static function DrawBlackoutPulse(Canvas C, float Alpha, float Time)
 }
 
 // ===================================================================
-// 11. DEAD SILENCE — Cold, sterile edge darkening + heartbeat pulse
+// 11. DEAD SILENCE ? Cold, sterile edge darkening + heartbeat pulse
 // Audio muting handled by ZTHudWrapper
 // ===================================================================
 
@@ -180,14 +180,14 @@ static function DrawDeadSilence(Canvas C, float Alpha, float Time)
 	W = C.SizeX;
 	H = C.SizeY;
 
-	// Heartbeat pulse (60 BPM) — brief edge flash
+	// Heartbeat pulse (60 BPM) ? brief edge flash
 	PulseAlpha = Abs(Sin(Time * 3.14159f));
 	PulseAlpha = PulseAlpha * PulseAlpha * PulseAlpha; // Sharp spike, long fade
 
 	// Cold grey-blue edge vignette
 	DrawEdgeVignette(C, W, H, Alpha, 5, 5, 12, 35.0f, 6);
 
-	// Heartbeat — momentary edge pulse on top
+	// Heartbeat ? momentary edge pulse on top
 	if (PulseAlpha > 0.3f)
 	{
 		DrawEdgeVignette(C, W, H, (PulseAlpha - 0.3f) * Alpha, 0, 0, 0, 20.0f, 4);
@@ -195,7 +195,7 @@ static function DrawDeadSilence(Canvas C, float Alpha, float Time)
 }
 
 // ===================================================================
-// 13. R.A.G.E. — Red edge glow, pulsing
+// 13. R.A.G.E. ? Red edge glow, pulsing
 // ===================================================================
 
 static function DrawRAGE(Canvas C, float Alpha, float Time)
@@ -215,7 +215,7 @@ static function DrawRAGE(Canvas C, float Alpha, float Time)
 }
 
 // ===================================================================
-// 17. PARANOIA — Barely perceptible, audio-focused event
+// 17. PARANOIA ? Barely perceptible, audio-focused event
 // ===================================================================
 
 static function DrawParanoia(Canvas C, float Alpha, float Time)
@@ -232,7 +232,7 @@ static function DrawParanoia(Canvas C, float Alpha, float Time)
 }
 
 // ===================================================================
-// 20. FOG OF WAR — Murky green-grey edge vignette
+// 20. FOG OF WAR ? Murky green-grey edge vignette
 // Zed hiding handled by ZTEventWaveManager
 // ===================================================================
 
@@ -253,7 +253,7 @@ static function DrawFogOfWar(Canvas C, float Alpha, float Time)
 }
 
 // ===================================================================
-// 26. DON'T BLINK — Pale, watchful edge darkening with a slow blink-pulse
+// 26. DON'T BLINK ? Pale, watchful edge darkening with a slow blink-pulse
 // Cosmetic only; the freeze/charge behaviour lives in ZTEventWaveManager
 // ===================================================================
 
@@ -281,14 +281,14 @@ static function DrawDontBlink(Canvas C, float Alpha, float Time)
 
 static function Texture2D GetEventIcon(byte EventID)
 {
-	if (EventID >= 1 && EventID <= 26)
+	if (EventID >= 1 && EventID <= 32)
 		return default.EventIcons[EventID];
 	return None;
 }
 
 static function Color GetEventColor(byte EventID)
 {
-	if (EventID >= 1 && EventID <= 26)
+	if (EventID >= 1 && EventID <= 32)
 		return default.EventColors[EventID];
 	return default.EventColors[0];
 }
@@ -323,6 +323,12 @@ defaultproperties
 	EventIcons(24)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_Jitterbug'
 	EventIcons(25)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_CostumeParty'
 	EventIcons(26)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_DontBlink'
+	EventIcons(27)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_PassTheBomb'
+	EventIcons(28)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_RedLightGreenLight'
+	EventIcons(29)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_FloorIsLava'
+	EventIcons(30)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_BodyguardBond'
+	EventIcons(31)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_BountyBoard'
+	EventIcons(32)=Texture2D'ZedternalRBPerkpackage_Resources.EventWaves.UI_EventWave_GoldenZedRelay'
 
 	EventColors(0)=(R=255,G=255,B=255,A=255)
 	EventColors(1)=(R=0,G=0,B=0,A=0)
@@ -351,6 +357,12 @@ defaultproperties
 	EventColors(24)=(R=0,G=220,B=255,A=255)
 	EventColors(25)=(R=255,G=80,B=200,A=255)
 	EventColors(26)=(R=200,G=210,B=230,A=255)
+	EventColors(27)=(R=255,G=120,B=0,A=255)
+	EventColors(28)=(R=255,G=60,B=60,A=255)
+	EventColors(29)=(R=255,G=140,B=20,A=255)
+	EventColors(30)=(R=80,G=200,B=255,A=255)
+	EventColors(31)=(R=255,G=200,B=60,A=255)
+	EventColors(32)=(R=255,G=215,B=0,A=255)
 
 	Name="Default__ZTEventWave"
 }

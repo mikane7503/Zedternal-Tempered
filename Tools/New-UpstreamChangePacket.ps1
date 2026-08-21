@@ -37,6 +37,7 @@ $changes = foreach ($line in $nameStatus) {
     $status = $parts[0]
     $path = $parts[-1]
     $leaf = Split-Path -Leaf $path
+    $isIgnored = @($manifest.ignoredUpstreamClasses) -contains $leaf
     $candidates = [System.Collections.Generic.List[string]]::new()
     $candidates.Add($leaf)
     if ($leaf -match '^DK') { $candidates.Add(('ZT' + $leaf.Substring(2))) }
@@ -55,7 +56,8 @@ $changes = foreach ($line in $nameStatus) {
         upstreamPath = $path
         upstreamClass = if ($leaf.EndsWith('.uc')) { $leaf.Substring(0, $leaf.Length - 3) } else { $null }
         temperedCandidates = $matches
-        requiresReview = ($path.EndsWith('.uc') -or $path -match '/Localization/' -or $path -match '/Config/')
+        ignoredByPolicy = $isIgnored
+        requiresReview = (-not $isIgnored -and ($path.EndsWith('.uc') -or $path -match '/Localization/' -or $path -match '/Config/'))
     }
 }
 
@@ -78,7 +80,7 @@ git -C $RepositoryRoot diff --binary $BaseRef $TargetRef -- $manifest.paths.upst
     Set-Content -LiteralPath (Join-Path $packetRoot 'upstream.patch') -Encoding utf8
 
 $review = @($changes | Where-Object requiresReview)
-$review | Select-Object status, upstreamPath, upstreamClass,
+$review | Select-Object status, upstreamPath, upstreamClass, ignoredByPolicy,
     @{Name='temperedCandidates';Expression={$_.temperedCandidates -join ';'}} |
     Export-Csv -LiteralPath (Join-Path $packetRoot 'review.csv') -NoTypeInformation -Encoding utf8
 

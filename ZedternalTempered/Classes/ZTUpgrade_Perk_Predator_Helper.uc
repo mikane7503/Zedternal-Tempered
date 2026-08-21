@@ -1626,8 +1626,23 @@ function byte ClassifyZed(KFPawn_Monster P)
     if (InStr(ClassName, "Scrake") != -1) return CAT_SCRAKE;
     if (InStr(ClassName, "Fleshpound") != -1) return CAT_FLESHPOUND;
 
-    `log("[DK_PREDATOR] Unknown zed class:" @ ClassName);
-    return 255;
+    // Custom ZedInject classes commonly inherit a vanilla archetype without
+    // retaining its name. Fall back to ancestry so their kills still count.
+    if (P.IsA('KFPawn_ZedCrawler')) return CAT_CRAWLER;
+    if (P.IsA('KFPawn_ZedStalker')) return CAT_STALKER;
+    if (P.IsA('KFPawn_ZedClot')) return CAT_CLOT;
+    if (P.IsA('KFPawn_ZedGorefast')) return CAT_GOREFAST;
+    if (P.IsA('KFPawn_ZedBloat')) return CAT_BLOAT;
+    if (P.IsA('KFPawn_ZedHusk')) return CAT_HUSK;
+    if (P.IsA('KFPawn_ZedSiren')) return CAT_SIREN;
+    if (P.IsA('KFPawn_ZedDAR')) return CAT_EDAR;
+    if (P.IsA('KFPawn_ZedScrake')) return CAT_SCRAKE;
+    if (P.IsA('KFPawn_ZedFleshpound')) return CAT_FLESHPOUND;
+
+    if (P.bLargeZed)
+        return CAT_SCRAKE;
+
+    return CAT_CLOT;
 }
 
 // ===================================================================

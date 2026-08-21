@@ -1,7 +1,6 @@
 class ZTUpgrade_Skill_PetrifyingPresence extends ZTUpgrade_Skill config(ZedternalUnlimited);
 
 var config array<float> PetrifyChance;
-var config array<float> StumbleMultiplier;
 var config array<float> DamageMultiplier;
 var config int MODEVERSION;
 
@@ -11,8 +10,6 @@ static function UpdateConfig()
 	{
 		default.PetrifyChance[0] = 0.1f;
 		default.PetrifyChance[1] = 0.2f;
-		default.StumbleMultiplier[0] = 2.0f;
-		default.StumbleMultiplier[1] = 2.0f;
 		default.DamageMultiplier[0] = 0.0f;
 		default.DamageMultiplier[1] = 0.5f;
 
@@ -20,9 +17,6 @@ static function UpdateConfig()
 		default.PetrifyChance.Length = 2;
 		default.PetrifyChance[0] = 0.100000f;
 		default.PetrifyChance[1] = 0.200000f;
-		default.StumbleMultiplier.Length = 2;
-		default.StumbleMultiplier[0] = 2.000000f;
-		default.StumbleMultiplier[1] = 2.000000f;
 		default.DamageMultiplier.Length = 2;
 		default.DamageMultiplier[0] = 0.000000f;
 		default.DamageMultiplier[1] = 0.500000f;

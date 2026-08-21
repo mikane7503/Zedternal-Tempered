@@ -58,6 +58,12 @@ var private float DKPassiveRateOfFire_256Plus;
 var private float DKPassiveTightChoke_256Plus;
 var private float DKPassivePenetration_256Plus;
 
+// Explosion chains may query this hundreds of times per frame. Cache the
+// result briefly instead of rescanning every purchased upgrade per query.
+var transient float ZTCameraShakeImmunityCacheTime;
+var transient bool bDKCameraShakeImmunityCached;
+var transient bool bDKCameraShakeImmunityValue;
+
 // ===================================================================
 // ROGUELIKE STAT ACCESS
 // ===================================================================
@@ -1140,7 +1146,12 @@ function ModifyDamageTaken(out int InDamage, optional class<DamageType> DamageTy
     }
 
     // === PLAYERCAPS: floor on incoming damage (caps max damage resistance) ===
-    DKCapMinScaleInt(InDamage, OrigInDamage, class'ZTConfig_PlayerCaps'.static.GetCapDamageTakenMinScale());
+    // The resistance cap must not undo a true immunity that intentionally
+    // reduced damage to zero.
+    if (InDamage > 0)
+    {
+        DKCapMinScaleInt(InDamage, OrigInDamage, class'ZTConfig_PlayerCaps'.static.GetCapDamageTakenMinScale());
+    }
 
     // === DR. JEKYLL & MR. HYDE: flat final reduction while transformed ===
     // Applied as the very last step so it is "10% less FINAL damage" -- after
@@ -2551,7 +2562,18 @@ simulated function bool ImmuneToCameraShake()
     local WMGameReplicationInfo WMGRI;
     local int i, idx;
 
-    if (Super.ImmuneToCameraShake()) return True;
+    if (bDKCameraShakeImmunityCached && WorldInfo.TimeSeconds - ZTCameraShakeImmunityCacheTime < 0.5f)
+        return bDKCameraShakeImmunityValue;
+
+    bDKCameraShakeImmunityCached = True;
+    ZTCameraShakeImmunityCacheTime = WorldInfo.TimeSeconds;
+    bDKCameraShakeImmunityValue = False;
+
+    if (Super.ImmuneToCameraShake())
+    {
+        bDKCameraShakeImmunityValue = True;
+        return True;
+    }
 
     DKPRI = GetDKPRISimulated();
     if (DKPRI == None) return False;
@@ -2566,7 +2588,10 @@ simulated function bool ImmuneToCameraShake()
         if (WMGRI.PerkUpgradesList[idx].PerkUpgrade == None) continue;
 
         if (WMGRI.PerkUpgradesList[idx].PerkUpgrade.static.ImmuneToCameraShake(DKPRI.GetPerkLevel(idx), OwnerPawn))
+        {
+            bDKCameraShakeImmunityValue = True;
             return True;
+        }
     }
 
     return False;

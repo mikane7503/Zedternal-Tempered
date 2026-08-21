@@ -3,6 +3,17 @@
 // Tracks kill count and refills the current weapon's magazine
 // when the threshold is reached. Uses the MagicBullet pattern
 // for reliable client-server ammo synchronization.
+//
+// Structure matches the proven SymbioticToxin / AmmoSiphon helpers:
+// plain server-side Info (ROLE_None), no property replication. The
+// previous replication block and RemoteRole override served no
+// purpose (KillCount is server-only) and were the single deviation
+// from the working helper shape.
+//
+// The kill counter caps at the threshold and only resets when a
+// refill actually transfers rounds, so a trigger that lands on a
+// full magazine or a melee weapon is retried on the next kill
+// instead of being consumed.
 // ===================================================================
 class ZTUpgrade_Skill_Mitosis_Helper extends Info transient;
 
@@ -10,12 +21,6 @@ var KFPawn_Human Player;
 var byte KillCount;
 var byte KillThreshold;
 var bool bDeluxe;
-
-replication
-{
-	if (Role == Role_Authority && bNetDirty)
-		KillCount;
-}
 
 function PostBeginPlay()
 {
@@ -34,40 +39,45 @@ function OnKill()
 		return;
 	}
 
-	++KillCount;
+	// Cap at threshold so a banked trigger cannot overshoot or wrap
+	if (KillCount < KillThreshold)
+		++KillCount;
 
 	if (KillCount >= KillThreshold)
 	{
-		KillCount = 0;
-		RefillMagazine();
+		// Only consume the quota when rounds actually moved.
+		// Otherwise keep it banked and retry on the next kill.
+		if (RefillMagazine())
+			KillCount = 0;
 	}
 }
 
-function RefillMagazine()
+// Returns true if at least one round was transferred into the magazine
+function bool RefillMagazine()
 {
 	local KFWeapon MyKFWeapon;
 
 	MyKFWeapon = KFWeapon(Player.Weapon);
 	if (MyKFWeapon == None)
-		return;
+		return false;
 
 	// Only refill if magazine has capacity > 1 (skip melee etc.)
 	if (MyKFWeapon.MagazineCapacity[0] <= 1)
-		return;
+		return false;
 
 	if (Player.WorldInfo.NetMode == NM_Standalone)
-		StandaloneRefill(MyKFWeapon);
+		return StandaloneRefill(MyKFWeapon);
 	else
-		ServerRefill(MyKFWeapon);
+		return ServerRefill(MyKFWeapon);
 }
 
-function StandaloneRefill(KFWeapon MyKFWeapon)
+function bool StandaloneRefill(KFWeapon MyKFWeapon)
 {
 	local int AmmoNeeded;
 
 	AmmoNeeded = MyKFWeapon.MagazineCapacity[0] - MyKFWeapon.AmmoCount[0];
 	if (AmmoNeeded <= 0)
-		return;
+		return false;
 
 	// Take from spare ammo
 	AmmoNeeded = Min(AmmoNeeded, MyKFWeapon.SpareAmmoCount[0]);
@@ -75,16 +85,19 @@ function StandaloneRefill(KFWeapon MyKFWeapon)
 	{
 		MyKFWeapon.AmmoCount[0] += AmmoNeeded;
 		MyKFWeapon.SpareAmmoCount[0] -= AmmoNeeded;
+		return true;
 	}
+
+	return false;
 }
 
-function ServerRefill(KFWeapon MyKFWeapon)
+function bool ServerRefill(KFWeapon MyKFWeapon)
 {
 	local int AmmoNeeded;
 
 	AmmoNeeded = MyKFWeapon.MagazineCapacity[0] - MyKFWeapon.AmmoCount[0];
 	if (AmmoNeeded <= 0)
-		return;
+		return false;
 
 	AmmoNeeded = Min(AmmoNeeded, MyKFWeapon.SpareAmmoCount[0]);
 	if (AmmoNeeded > 0)
@@ -92,7 +105,10 @@ function ServerRefill(KFWeapon MyKFWeapon)
 		MyKFWeapon.AmmoCount[0] += AmmoNeeded;
 		MyKFWeapon.SpareAmmoCount[0] -= AmmoNeeded;
 		ClientRefill(AmmoNeeded);
+		return true;
 	}
+
+	return false;
 }
 
 reliable client function ClientRefill(int Ammo)
@@ -115,8 +131,6 @@ reliable client function ClientRefill(int Ammo)
 
 defaultproperties
 {
-	RemoteRole=ROLE_SimulatedProxy
-	bSkipActorPropertyReplication=False
 	KillCount=0
 	KillThreshold=15
 	bDeluxe=False

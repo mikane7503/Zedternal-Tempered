@@ -25,28 +25,31 @@ static function WaveEnd(int upgLevel, KFPlayerController KFPC)
 {
 	local KFPawn Player;
 	local KFInventoryManager KFIM;
+	local int NewCount;
     
 	Player = KFPawn(KFPC.Pawn);
-    KFIM = KFInventoryManager(Player.InvManager);
-    
-	if((Player != none) && Player.IsAliveAndWell())
-	{
+	if (Player == None || !Player.IsAliveAndWell())
+		return;
+
+	KFIM = KFInventoryManager(Player.InvManager);
+	if (KFIM == None)
+		return;
+
 	if (upgLevel == 1)
-	   KFIM.AddGrenades(2);
+		NewCount = int(KFIM.GrenadeCount) + 2;
 	else
-	   KFIM.AddGrenades(4);
-    }
+		NewCount = int(KFIM.GrenadeCount) + 4;
+
+	// AddGrenades clamps at the ordinary maximum and loses this bonus.
+	KFIM.GrenadeCount = byte(Min(255, NewCount));
 }
 
 static simulated function ModifySpareAmmoAmount(out int InSpareAmmo, int DefaultSpareAmmo, int upgLevel, KFWeapon KFW, const optional out STraderItem TraderItem, optional bool bSecondary)
 {
-    bSecondary = false;
-    // End:0x4D
     if(!bSecondary)
     {
         InSpareAmmo += Round((float(DefaultSpareAmmo) * default.SpareAmmo[upgLevel - 1]));
     }
-    //return;    
 }
 
 defaultproperties

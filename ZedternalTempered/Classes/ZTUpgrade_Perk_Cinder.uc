@@ -14,8 +14,6 @@ var config float BurnDurationPerLevel;         // +0.2 seconds burn duration per
 // Level 10 bonuses - "Symbiotic Synergy"
 var config float DamagePerBurningEnemy;        // +5% fire damage per burning enemy
 var config int MaxBurningEnemyBonus;           // Cap at 10 enemies
-var config float FireSpreadBonus;              // 30% faster fire spread
-var config float BurningEnemyFireResist;       // -10% fire resistance for burning enemies
 
 // Level 20 bonuses - "Phoenix Protocol"
 var config float Level20DamagePerBurningEnemy; // +8% fire damage per burning enemy
@@ -37,8 +35,6 @@ static function UpdateConfig()
 		default.BurnDurationPerLevel = 0.2f;
 		default.DamagePerBurningEnemy = 0.05f;
 		default.MaxBurningEnemyBonus = 10;
-		default.FireSpreadBonus = 0.30f;
-		default.BurningEnemyFireResist = 0.10f;
 		default.Level20DamagePerBurningEnemy = 0.08f;
 		default.PhoenixDamageReduction = 1.0f;
 		default.PhoenixDuration = 10.0f;
@@ -51,8 +47,6 @@ static function UpdateConfig()
 		default.BurnDurationPerLevel = 0.100000f;
 		default.DamagePerBurningEnemy = 0.025000f;
 		default.MaxBurningEnemyBonus = 10;
-		default.FireSpreadBonus = 0.150000f;
-		default.BurningEnemyFireResist = 0.050000f;
 		default.Level20DamagePerBurningEnemy = 0.040000f;
 		default.PhoenixDamageReduction = 0.250000f;
 		default.PhoenixDuration = 10.000000f;

@@ -23,7 +23,11 @@ static function UpdateConfig()
 
 static simulated function ModifyMagSizeAndNumber(out int InMagazineCapacity, int DefaultMagazineCapacity, int upgLevel, KFWeapon KFW, optional array< Class<KFPerk> > WeaponPerkClass, optional bool bSecondary=False, optional name WeaponClassname)
 {
-	InMagazineCapacity += Round(float(InMagazineCapacity) * (1.0f + default.MagazineBoost[upgLevel - 1]));
+	// BUGFIX: the old code added InMagazineCapacity * (1 + boost) on top of
+	// the already-modified value, which double-counted the boost AND
+	// compounded with every other magazine skill (+215%/+330% instead of
+	// the advertised +115%/+230%). Additive on the default per convention.
+	InMagazineCapacity += Round(float(DefaultMagazineCapacity) * default.MagazineBoost[upgLevel - 1]);
 }
 
 

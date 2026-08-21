@@ -48,14 +48,16 @@ function AddHeatStack(KFPawn_Monster Target, int SkillLevel)
     if (Target == None || !Target.IsAliveAndWell())
         return;
         
-    // Get skill parameters based on level
+    // Get skill parameters based on level. Config-driven:
+    // [ZedternalTempered.ZTUpgrade_Skill_ThermalDrill] MaxStacks
+    // (index 0 = standard, 1 = deluxe).
     if (SkillLevel == 1)
     {
-        MaxStacks = 5;
+        MaxStacks = class'ZTUpgrade_Skill_ThermalDrill'.default.MaxStacks[0];
     }
     else
     {
-        MaxStacks = 8;
+        MaxStacks = class'ZTUpgrade_Skill_ThermalDrill'.default.MaxStacks[1];
     }
     
     bFoundTarget = False;
@@ -101,8 +103,12 @@ function UpdateHeatStacks()
             continue;
         }
         
-        // Determine stack duration (assume level 2 if stacks > 5, otherwise level 1)
-        StackDuration = (HeatTargets[i].HeatStacks > 5) ? 6.0f : 4.0f;
+        // Determine stack duration. No skill level here, so infer deluxe the
+        // same way the old hardcode did: more stacks than the standard cap
+        // means deluxe. Values are config-driven (StackDuration[0/1]).
+        StackDuration = (HeatTargets[i].HeatStacks > class'ZTUpgrade_Skill_ThermalDrill'.default.MaxStacks[0])
+            ? class'ZTUpgrade_Skill_ThermalDrill'.default.StackDuration[1]
+            : class'ZTUpgrade_Skill_ThermalDrill'.default.StackDuration[0];
         
         if (WorldInfo.TimeSeconds - HeatTargets[i].LastHitTime > StackDuration)
         {

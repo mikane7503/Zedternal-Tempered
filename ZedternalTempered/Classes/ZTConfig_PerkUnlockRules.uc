@@ -34,6 +34,16 @@ struct S_AchievementPerkUnlock
 	var string AchievementID;
 };
 
+// Override the RequiredCount of an existing achievement (see the valid
+// AchievementID list in the header). Applied at match start, before
+// perk links are wired, so progress display and completion checks all
+// use the new target.
+struct S_AchievementTargetOverride
+{
+	var string AchievementID;
+	var int RequiredCount;
+};
+
 struct S_PerkExclusionRule
 {
 	var string PerkA;
@@ -51,6 +61,7 @@ struct S_RankPerkUnlock
 
 var config array<S_PerkUnlockRule> PerkUnlockRules;
 var config array<S_AchievementPerkUnlock> AchievementPerkUnlocks;
+var config array<S_AchievementTargetOverride> AchievementTargetOverrides;
 var config array<S_PerkExclusionRule> PerkExclusionRules;
 var config array<S_RankPerkUnlock> RankPerkUnlocks;
 var config int MODEVERSION;
@@ -294,6 +305,16 @@ static function InitializeConfig()
 		default.MODEVERSION = 5;
 		static.StaticSaveConfig();
 	}
+
+
+	if (default.MODEVERSION < 6)
+	{
+		// v6: configurable achievement targets from current Unlimited.
+		default.AchievementTargetOverrides.Length = 0;
+		AddDefaultTargetOverride("NoTrader5Waves", 5);
+		default.MODEVERSION = 6;
+		static.StaticSaveConfig();
+	}
 }
 
 static function AddOrUpdateDiabloUnlockRule()
@@ -356,6 +377,16 @@ static function AddDefaultAchievementUnlock(string PerkName, string AchievementI
 	Entry.AchievementID = AchievementID;
 
 	default.AchievementPerkUnlocks.AddItem(Entry);
+}
+
+static function AddDefaultTargetOverride(string AchievementID, int RequiredCount)
+{
+	local S_AchievementTargetOverride Entry;
+
+	Entry.AchievementID = AchievementID;
+	Entry.RequiredCount = RequiredCount;
+
+	default.AchievementTargetOverrides.AddItem(Entry);
 }
 
 static function AddDefaultRankUnlock(string PerkName, int RequiredRank, byte UnlockMode)
@@ -483,6 +514,23 @@ static function CheckBasicConfigValues()
 		}
 	}
 
+	// Validate achievement target overrides
+	for (i = 0; i < default.AchievementTargetOverrides.Length; ++i)
+	{
+		if (default.AchievementTargetOverrides[i].AchievementID == "")
+		{
+			`log("[ZT_UNLOCK] WARNING: Empty AchievementID in target override at index" @ i $ ", removing");
+			default.AchievementTargetOverrides.Remove(i, 1);
+			--i;
+			continue;
+		}
+		if (default.AchievementTargetOverrides[i].RequiredCount < 1)
+		{
+			`log("[ZT_UNLOCK] WARNING: RequiredCount < 1 for target override" @ default.AchievementTargetOverrides[i].AchievementID $ ", clamping to 1");
+			default.AchievementTargetOverrides[i].RequiredCount = 1;
+		}
+	}
+
 	// Validate rank perk unlocks
 	for (i = 0; i < default.RankPerkUnlocks.Length; ++i)
 	{
@@ -554,6 +602,11 @@ static function ApplyAchievementPerkLinks(ZTAchievementData AchData)
 
 	if (AchData == None) return;
 
+	// Apply target overrides FIRST so the log below reports final values
+	// and every downstream consumer (progress HUD, completion checks)
+	// sees the overridden RequiredCount from the start of the match.
+	ApplyAchievementTargetOverrides(AchData);
+
 	for (i = 0; i < default.AchievementPerkUnlocks.Length; ++i)
 	{
 		AchIdx = AchData.FindAchievementByName(default.AchievementPerkUnlocks[i].AchievementID);
@@ -571,6 +624,39 @@ static function ApplyAchievementPerkLinks(ZTAchievementData AchData)
 	}
 }
 
+// Rewrite the RequiredCount of existing achievements from config.
+static function ApplyAchievementTargetOverrides(ZTAchievementData AchData)
+{
+	local int i, AchIdx, OldCount;
+
+	if (AchData == None) return;
+
+	for (i = 0; i < default.AchievementTargetOverrides.Length; ++i)
+	{
+		AchIdx = AchData.FindAchievementByName(default.AchievementTargetOverrides[i].AchievementID);
+		if (AchIdx == INDEX_NONE)
+		{
+			`log("[DK_UNLOCK] WARNING: Target override for unknown Achievement ID"
+				@ default.AchievementTargetOverrides[i].AchievementID @ "- ignored");
+			continue;
+		}
+
+		OldCount = AchData.Achievements[AchIdx].RequiredCount;
+		if (OldCount == default.AchievementTargetOverrides[i].RequiredCount)
+			continue;
+
+		AchData.Achievements[AchIdx].RequiredCount = default.AchievementTargetOverrides[i].RequiredCount;
+		AchData.Achievements[AchIdx].Description = Repl(
+			AchData.Achievements[AchIdx].Description,
+			string(OldCount),
+			string(default.AchievementTargetOverrides[i].RequiredCount)
+		);
+
+		`log("[DK_UNLOCK] Achievement target override:"
+			@ default.AchievementTargetOverrides[i].AchievementID
+			@ "RequiredCount" @ OldCount @ "->" @ default.AchievementTargetOverrides[i].RequiredCount);
+	}
+}
 defaultproperties
 {
 	Name="Default__ZTConfig_PerkUnlockRules"

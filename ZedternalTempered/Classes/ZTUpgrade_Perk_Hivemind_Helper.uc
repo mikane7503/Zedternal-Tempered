@@ -16,6 +16,7 @@ var float ProximityCheckInterval;
 var int SwarmKillProgress;
 var bool bSwarmCollectiveActive;
 var float SwarmCollectiveEndTime;
+var float SwarmCooldownEndTime;   // kills do not count until this time (post-buff recharge)
 var bool bSwarmReadyNotificationSent;
 
 // Wave tracking for auto-reset
@@ -191,6 +192,12 @@ function OnKill(KFPawn_Monster KilledMonster)
 	if (bSwarmCollectiveActive)
 		return;
 	
+	// Don't track kills during the post-buff recharge - without this gate,
+	// late-wave zed density refills the counter instantly and the buff
+	// re-triggers every ~10 seconds
+	if (Player.WorldInfo.TimeSeconds < SwarmCooldownEndTime)
+		return;
+	
 	// Increment kill progress (no Symbiote requirement - Swarm Collective is independent)
 	SwarmKillProgress++;
 	
@@ -264,13 +271,14 @@ function TriggerSwarmCollective()
 function EndSwarmCollective()
 {
 	bSwarmCollectiveActive = false;
+	SwarmCooldownEndTime = Player.WorldInfo.TimeSeconds + class'ZTUpgrade_Perk_Hivemind'.default.SwarmCooldownSeconds;
 	
 	class'ZTMessageManager'.static.SendImportant(
 		KFPlayerController(Player.Controller),
-		"Swarm Collective ended - keep killing to recharge!"
+		"Swarm Collective ended - recharging before kills count again."
 	);
 	
-	`log("Hivemind: Swarm Collective ended");
+	`log("Hivemind: Swarm Collective ended, cooldown until" @ SwarmCooldownEndTime);
 }
 
 // Called when wave starts - reset Swarm Collective
@@ -278,6 +286,7 @@ function ResetSwarmCollective()
 {
 	SwarmKillProgress = 0;
 	bSwarmCollectiveActive = false;
+	SwarmCooldownEndTime = 0.0f;
 	bSwarmReadyNotificationSent = false;
 	
 	`log("Hivemind: Swarm Collective reset for new wave");

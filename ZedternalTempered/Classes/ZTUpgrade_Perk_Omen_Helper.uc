@@ -855,10 +855,14 @@ function CompleteProphecy()
             if (HealthReward > 0)
             {
                 Player.HealthMax += HealthReward;
+                ClampHealthToCap();
                 Player.Health = Min(Player.Health + HealthReward, Player.HealthMax);
             }
             if (ArmorReward > 0)
+            {
                 Player.MaxArmor += ArmorReward;
+                ClampArmorToCap();
+            }
         }
 
         // --- Bonus HP from skill helpers (Blood Tithe) ---
@@ -870,6 +874,7 @@ function CompleteProphecy()
                 if (BonusHP > 0)
                 {
                     Player.HealthMax += BonusHP;
+                    ClampHealthToCap();
                     Player.Health = Min(Player.Health + BonusHP, Player.HealthMax);
                     AccMaxHealth += BonusHP;
                     `log("[DK_OMEN] Skill bonus HP:" @ BonusHP);
@@ -895,6 +900,44 @@ function CompleteProphecy()
         {
             SH.OnProphecyCompleted();
         }
+    }
+}
+
+// ===================================================================
+// PLAYERCAPS CLAMPS
+// These blessings write HealthMax/MaxArmor directly, bypassing the
+// ZTPerk.ModifyHealth/ModifyArmorInt clamps, so the configured caps
+// must be enforced here as well.
+// ===================================================================
+function ClampHealthToCap()
+{
+    local int HealthCap;
+
+    if (Player == None || !class'ZTConfig_PlayerCaps'.static.IsEnabled())
+        return;
+
+    HealthCap = class'ZTConfig_PlayerCaps'.static.GetCapMaxHealth();
+    if (HealthCap > 0 && Player.HealthMax > HealthCap)
+    {
+        Player.HealthMax = HealthCap;
+        if (Player.Health > Player.HealthMax)
+            Player.Health = Player.HealthMax;
+    }
+}
+
+function ClampArmorToCap()
+{
+    local int ArmorCap;
+
+    if (Player == None || !class'ZTConfig_PlayerCaps'.static.IsEnabled())
+        return;
+
+    ArmorCap = class'ZTConfig_PlayerCaps'.static.GetCapMaxArmor();
+    if (ArmorCap > 0 && Player.MaxArmor > ArmorCap)
+    {
+        Player.MaxArmor = ArmorCap;
+        if (Player.Armor > Player.MaxArmor)
+            Player.Armor = Player.MaxArmor;
     }
 }
 

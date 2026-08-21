@@ -21,6 +21,7 @@ var config float SwarmCollectiveDuration;      // 8 seconds
 var config float SwarmDamageBonus;             // +30% damage
 var config float SwarmReloadBonus;             // +50% reload speed
 var config float SwarmMovementBonus;           // +15% movement speed
+var config float SwarmCooldownSeconds;         // recharge delay after the buff ends - kills do not count during it
 var config int MODEVERSION;
 
 static function UpdateConfig()
@@ -51,6 +52,17 @@ static function UpdateConfig()
 		default.SwarmMovementBonus = 0.075000f;
 		// END TEMPERED INI DEFAULTS
 		default.MODEVERSION = 1;
+		static.StaticSaveConfig();
+	}
+
+	// v2: Swarm Collective cooldown. Without it, late-wave zed density
+	// refills the 20-kill counter the moment the buff ends, re-triggering
+	// roughly every 10 seconds. Kills do not count while on cooldown.
+	if (default.MODEVERSION < 2)
+	{
+		default.SwarmCooldownSeconds = 45.0f;
+
+		default.MODEVERSION = 2;
 		static.StaticSaveConfig();
 	}
 }

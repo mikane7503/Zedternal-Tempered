@@ -90,17 +90,19 @@ function TrackDamage(int DamageAmount, int SkillLevel)
     // Calculate total damage in the last 3 seconds
     TotalDamageInWindow = CalculateDamageInWindow(CurrentTime);
     
-    // Get trigger threshold and buff parameters
+    // Get trigger threshold and buff parameters. Trigger and duration are
+    // config-driven ([ZedternalTempered.ZTUpgrade_Skill_ShedSkin]
+    // DamageTrigger / BuffDuration, index 0 = standard, 1 = deluxe).
     if (SkillLevel == 1)
     {
-        DamageTrigger = 50;
-        BuffDuration = 8.0f;
+        DamageTrigger = class'ZTUpgrade_Skill_ShedSkin'.default.DamageTrigger[0];
+        BuffDuration = class'ZTUpgrade_Skill_ShedSkin'.default.BuffDuration[0];
         CooldownDuration = 30.0f;
     }
     else
     {
-        DamageTrigger = 25;
-        BuffDuration = 12.0f;
+        DamageTrigger = class'ZTUpgrade_Skill_ShedSkin'.default.DamageTrigger[1];
+        BuffDuration = class'ZTUpgrade_Skill_ShedSkin'.default.BuffDuration[1];
         CooldownDuration = 20.0f;
     }
     

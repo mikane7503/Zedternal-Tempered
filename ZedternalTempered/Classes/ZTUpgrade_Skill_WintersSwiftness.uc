@@ -27,14 +27,22 @@ static function UpdateConfig()
 }
 
 
+// BUGFIX: both hooks previously overwrote the accumulated value from the
+// DefaultX basis (InSpeed = DefaultSpeed * (1 + bonus)), which discarded
+// every other speed contributor processed before this skill and could
+// therefore LOWER the final value. Both now compose with the incoming
+// value like every other WM/DK modifier.
 static simulated function ModifySpeed(out float InSpeed, float DefaultSpeed, int upgLevel, KFPawn OwnerPawn)
 {
-    InSpeed = DefaultSpeed * (1.0f + default.MovementSpeed[upgLevel - 1]);
+	InSpeed += DefaultSpeed * default.MovementSpeed[upgLevel - 1];
 }
 
 static simulated function ModifyWeaponSwitchTime(out float InSwitchTime, float DefaultSwitchTime, int upgLevel, KFWeapon KFW)
 {
-    InSwitchTime = DefaultSwitchTime * default.WeaponSwitchSpeed[upgLevel - 1];
+	// Config value is a switch TIME multiplier (0.5 = twice as fast,
+	// matching "100% weapon switch speed"). Multiply the incoming time
+	// so prior contributors are preserved.
+	InSwitchTime *= default.WeaponSwitchSpeed[upgLevel - 1];
 }
 
 defaultproperties

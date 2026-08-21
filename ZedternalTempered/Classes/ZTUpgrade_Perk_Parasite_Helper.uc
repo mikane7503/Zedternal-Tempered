@@ -370,8 +370,9 @@ function OnKillForBloodHarvest(KFPawn_Monster KilledMonster)
 	if (bHemorrhagePulseUsedThisWave)
 		return;
 	
-	// Only count kills when 3+ enemies are siphoned
-	if (SiphonedEnemies.Length < 3)
+	// Only count kills when enough enemies are siphoned. Config-driven:
+	// [ZedternalTempered.ZTUpgrade_Perk_Parasite] MinSiphonedForHarvest
+	if (SiphonedEnemies.Length < class'ZTUpgrade_Perk_Parasite'.default.MinSiphonedForHarvest)
 		return;
 	
 	BloodHarvestProgress++;
@@ -470,14 +471,14 @@ function TriggerHemorrhagePulse()
 	// loop. So we clear AFTER the heals instead.
 	
 	// Heal self for 100% of damage dealt
-	SelfHeal = TotalDamage;
+	SelfHeal = Round(float(TotalDamage) * class'ZTUpgrade_Perk_Parasite'.default.HemorrhageHealPercent);
 	if (SelfHeal > 0)
 	{
 		Player.HealDamage(SelfHeal, Player.Controller, class'KFDT_Healing');
 	}
 	
 	// Heal nearby teammates for 50% of damage dealt
-	TeamHeal = TotalDamage / 2;
+	TeamHeal = Round(float(TotalDamage) * class'ZTUpgrade_Perk_Parasite'.default.HemorrhageTeamHealPercent);
 	if (TeamHeal > 0)
 	{
 		foreach Player.WorldInfo.AllPawns(class'KFPawn_Human', Teammate)

@@ -57,7 +57,13 @@ function TrackPoisonKill(int SkillLevel)
     KFPC = KFPlayerController(Player.Controller);
     if (KFPC == None) return;
     
-    RequiredKills = 50; // Both versions require 50 poison kills
+    // Kill requirement is config-driven:
+    // [ZedternalTempered.ZTUpgrade_Skill_Metamorphosis] PoisonKillsRequired
+    // (index 0 = standard, 1 = deluxe)
+    if (SkillLevel == 1)
+        RequiredKills = class'ZTUpgrade_Skill_Metamorphosis'.default.PoisonKillsRequired[0];
+    else
+        RequiredKills = class'ZTUpgrade_Skill_Metamorphosis'.default.PoisonKillsRequired[1];
     
     // Check if we've reached the required kills
     if (PoisonKillsThisWave >= RequiredKills)
@@ -82,15 +88,16 @@ function TriggerTransformation(int SkillLevel)
     KFPC = KFPlayerController(Player.Controller);
     if (KFPC == None) return;
     
-    // Get transformation parameters based on skill level
+    // Get transformation parameters based on skill level. Duration is
+    // config-driven (TransformDuration, index 0 = standard, 1 = deluxe).
     if (SkillLevel == 1)
     {
-        Duration = 5.0f;
+        Duration = class'ZTUpgrade_Skill_Metamorphosis'.default.TransformDuration[0];
         StatBonus = 10;
     }
     else
     {
-        Duration = 10.0f;
+        Duration = class'ZTUpgrade_Skill_Metamorphosis'.default.TransformDuration[1];
         StatBonus = 20;
     }
     
@@ -162,7 +169,9 @@ function string GetProgressStatus()
     local string Status;
     local int RequiredKills;
     
-    RequiredKills = 50;
+    // Display-only; no skill level in scope, use the standard index (both
+    // seeds are 50 by default, config-driven).
+    RequiredKills = class'ZTUpgrade_Skill_Metamorphosis'.default.PoisonKillsRequired[0];
     
     if (bTransformationActive)
     {

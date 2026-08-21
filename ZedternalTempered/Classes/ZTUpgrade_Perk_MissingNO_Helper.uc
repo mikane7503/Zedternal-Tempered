@@ -27,6 +27,13 @@ var int UpgradeLevel;
 var bool bGlitchActive;
 var bool bDataMissingUsedThisWave;
 
+// --- Skill overrides (set by ZTUpgrade_Skill_* via setters; Possess pattern) ---
+var float SkillGlitchChanceBonus;      // Stack Corruption (flat add to proc chance)
+var int SkillArmorProcLevel;           // Hex Edit (0 off, 1: +5 armor outcome, 2: +10)
+var float SkillDataMissingChanceBonus; // Corrupted Save (flat add)
+var int SkillDataMissingMaxUses;       // Corrupted Save Deluxe (2 uses/wave)
+var int DataMissingUsesThisWave;
+
 // Type Mismatch (Lv 10) - index into the rotating DT pool (0-4), or -1 if inactive
 var int CurrentDamageTypeIndex;
 
@@ -73,6 +80,15 @@ function SetUpgradeLevel(int NewLevel)
 	// Dropped below Lv 10 (e.g. perk reroll) - clear DT
 	if (UpgradeLevel < 10)
 		CurrentDamageTypeIndex = -1;
+}
+
+// --- Skill setters (0 level = revert to neutral) ---
+function SetSkillGlitchBonus(float Bonus) { SkillGlitchChanceBonus = FMax(0.0f, Bonus); }
+function SetSkillArmorProc(int L) { SkillArmorProcLevel = Clamp(L, 0, 2); }
+function SetSkillDataMissing(float ChanceBonus, int MaxUses)
+{
+	SkillDataMissingChanceBonus = FMax(0.0f, ChanceBonus);
+	SkillDataMissingMaxUses = Max(1, MaxUses);
 }
 
 // ===================================================================
@@ -130,7 +146,8 @@ function ActivateDataMissing(KFPawn_Human Player, float Duration)
 		return;
 
 	bGlitchActive = true;
-	bDataMissingUsedThisWave = true;
+	++DataMissingUsesThisWave;
+	bDataMissingUsedThisWave = (DataMissingUsesThisWave >= Max(1, SkillDataMissingMaxUses));
 
 	// Heal to full via the proper damage pipeline so it replicates.
 	HealAmount = Player.HealthMax - Player.Health;
@@ -179,6 +196,7 @@ function OnWaveEnd()
 {
 	// Reset survive proc gate for next wave
 	bDataMissingUsedThisWave = false;
+	DataMissingUsesThisWave = 0;
 
 	// Force-end any active glitch (shouldn't normally be active at wave end,
 	// but defensive cleanup)

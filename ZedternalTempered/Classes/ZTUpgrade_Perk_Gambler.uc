@@ -1,7 +1,6 @@
 Class ZTUpgrade_Perk_Gambler extends ZTUpgrade_Perk
 	config(ZedternalUnlimited);
 
-var config int Doodle;
 var config float Chance;
 var config int Dosh;
 var config int MODEVERSION;
@@ -10,16 +9,22 @@ static function UpdateConfig()
 {
 	if (default.MODEVERSION < 1)
 	{
-		default.Doodle = 25;
 		default.Chance = 0.01f;
 		default.Dosh = 2;
 
 		// BEGIN TEMPERED INI DEFAULTS (generated; do not edit by hand)
-		default.Doodle = 40;
 		default.Chance = 0.020000f;
 		default.Dosh = 20;
 		// END TEMPERED INI DEFAULTS
 		default.MODEVERSION = 1;
+		static.StaticSaveConfig();
+	}
+
+
+	// v2: retire Doodle while preserving Tempered's configured Dosh value.
+	if (default.MODEVERSION < 2)
+	{
+		default.MODEVERSION = 2;
 		static.StaticSaveConfig();
 	}
 }
@@ -29,7 +34,7 @@ static function WaveEnd(int upgLevel, KFPlayerController KFPC)
 {
     if(KFPC != none)
     {
-        KFPlayerReplicationInfo(KFPC.PlayerReplicationInfo).AddDosh(default.Doodle * upgLevel);
+        KFPlayerReplicationInfo(KFPC.PlayerReplicationInfo).AddDosh(default.Dosh * upgLevel);
     }
 }
 

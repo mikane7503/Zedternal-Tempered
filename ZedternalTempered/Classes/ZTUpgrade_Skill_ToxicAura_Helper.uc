@@ -53,17 +53,12 @@ function ApplyToxicAuraDamage()
     KFPC = KFPlayerController(Player.Controller);
     if (KFPC == None) return;
     
-    // Get aura parameters based on upgrade level
-    if (UpgradeLevel == 1)
-    {
-        AuraRange = 300.0f; // 3m
-        AuraDamage = 2;
-    }
-    else
-    {
-        AuraRange = 500.0f; // 5m
-        AuraDamage = 4;
-    }
+    // Get aura parameters from the skill config (INI section
+    // [ZedternalTempered.ZTUpgrade_Skill_ToxicAura]). These were
+    // previously hardcoded here, so the config values were ignored.
+    i = Clamp(UpgradeLevel, 1, class'ZTUpgrade_Skill_ToxicAura'.default.AuraRange.Length) - 1;
+    AuraRange = class'ZTUpgrade_Skill_ToxicAura'.default.AuraRange[i];
+    AuraDamage = class'ZTUpgrade_Skill_ToxicAura'.default.AuraDamage[Clamp(UpgradeLevel, 1, class'ZTUpgrade_Skill_ToxicAura'.default.AuraDamage.Length) - 1];
     
     // Find all monsters within aura range
     foreach Player.CollidingActors(class'KFPawn_Monster', NearbyMonster, AuraRange)

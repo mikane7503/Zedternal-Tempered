@@ -73,11 +73,13 @@ function ActivateLegacyBuff(int SkillLevel)
     KFPC = KFPlayerController(Player.Controller);
     if (KFPC == None) return;
     
-    // Get buff duration based on skill level
+    // Get buff duration based on skill level. Config-driven:
+    // [ZedternalTempered.ZTUpgrade_Skill_GorgonsLegacy] BuffDuration
+    // (index 0 = standard, 1 = deluxe)
     if (SkillLevel == 1)
-        Duration = 45.0f;
+        Duration = class'ZTUpgrade_Skill_GorgonsLegacy'.default.BuffDuration[0];
     else
-        Duration = 60.0f;
+        Duration = class'ZTUpgrade_Skill_GorgonsLegacy'.default.BuffDuration[1];
     
     bLegacyBuffActive = true;
     BuffTimeRemaining = Duration;

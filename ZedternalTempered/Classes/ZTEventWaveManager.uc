@@ -1,5 +1,5 @@
 // ===================================================================
-// ZTEventWaveManager — Server-side event wave logic controller
+// ZTEventWaveManager ? Server-side event wave logic controller
 //
 // Spawned by GameInfo when an event that needs server logic starts.
 // Handles: target selection, swap timers, damage modification,
@@ -16,7 +16,7 @@ var byte ActiveEventID;
 var KFPlayerController TargetPC;
 var PlayerReplicationInfo TargetPRI;
 
-// Amogus — NOT replicated, server-only secret
+// Amogus ? NOT replicated, server-only secret
 var KFPlayerController ImpostorPC;
 
 // Swap timer for events 10, 12, 18
@@ -46,7 +46,7 @@ var bool bNemesisSpawned;
 var array<KFPlayerController> DuelPlayers;
 var byte CategoryOwner[10]; // Player index that owns each zed category (255 = unassigned)
 
-// Event wave music — one SoundCue per event (None = no custom music)
+// Event wave music ? one SoundCue per event (None = no custom music)
 var SoundCue EventMusic_Isolation;
 var SoundCue EventMusic_BlackoutPulse;
 var SoundCue EventMusic_VIP;
@@ -66,6 +66,12 @@ var SoundCue EventMusic_XMen;
 var SoundCue EventMusic_Jitterbug;
 var SoundCue EventMusic_CostumeParty;
 var SoundCue EventMusic_DontBlink;
+var SoundCue EventMusic_PassTheBomb;
+var SoundCue EventMusic_RedLightGreenLight;
+var SoundCue EventMusic_FloorIsLava;
+var SoundCue EventMusic_BodyguardBond;
+var SoundCue EventMusic_BountyBoard;
+var SoundCue EventMusic_GoldenZedRelay;
 var bool bEventMusicLoaded;
 var float EventMusicFadeOutDuration;
 
@@ -137,9 +143,9 @@ const DONTBLINK_DECAY_RATE = 0.20f;     // intensity lost per second while unwat
 const DONTBLINK_SPEED_BONUS = 2.0f;     // speed  = base * (1 + BONUS * intensity)
 const DONTBLINK_DAMAGE_BONUS = 2.5f;    // damage = base * (1 + BONUS * intensity)
 const DONTBLINK_VIEW_DOT = 0.93f;       // cos of half view-cone (~21.5 deg)
-const DONTBLINK_VIEW_RANGE = 12000.f;   // max watch distance (UU)
+const DONTBLINK_VIEW_RANGE = 4000.f;    // max watch distance (UU, ~80 m - was 12000 which froze zeds map-wide)
 const DONTBLINK_FREEZE_SPEED = 1.0f;    // near-zero speed while frozen
-var bool bDontBlinkUseTrace;            // optional line-of-sight trace (off by default)
+var bool bDontBlinkUseTrace;            // line-of-sight trace so walls break the gaze (on by default)
 
 struct DontBlinkZed
 {
@@ -149,6 +155,62 @@ struct DontBlinkZed
 	var float BaseSprint;
 };
 var array<DontBlinkZed> DBZeds;
+
+// --- 27. Pass The Bomb ---
+const BOMB_FUSE_BASE = 20.f;      // starting fuse per cycle (s)
+const BOMB_FUSE_MIN = 8.f;        // fuse never shorter than this
+const BOMB_FUSE_DECAY = 2.f;      // fuse lost per successful pass (s)
+const BOMB_TRANSFER_RADIUS = 300.f;   // touch range to hand off (UU)
+const BOMB_TRANSFER_LOCK = 3.f;   // no hand-off possible right after a pass (s)
+const BOMB_BLAST_RADIUS = 600.f;  // splash range on detonation (UU)
+var float BombFuseEnd;
+var float BombLockUntil;
+var int BombPassCount;
+var KFPlayerController BombPrevHolder;
+
+// --- 28. Red Light, Green Light ---
+const RLGL_GREEN_MIN = 8.f;
+const RLGL_GREEN_MAX = 15.f;
+const RLGL_WARN_TIME = 1.2f;
+const RLGL_RED_TIME = 4.f;
+const RLGL_MOVE_THRESHOLD = 60.f;   // velocity above this during red = punished
+const RLGL_TICK_DMG_PCT = 0.02f;    // fraction of max HP per punish tick
+
+// --- 29. The Floor Is Lava ---
+const LAVA_RADIUS = 900.f;          // safe zone radius (UU, ~18 m)
+const LAVA_RELOCATE = 25.f;         // zone lifetime before moving (s)
+const LAVA_TELEGRAPH = 5.f;         // warning before the move lands (s)
+const LAVA_TICK_DMG_PCT = 0.025f;   // fraction of max HP per 0.5s tick outside
+const LAVA_KILL_DOSH = 15;          // bonus dosh per kill scored inside the zone
+var array<vector> LavaAnchors;
+var vector NextLavaLoc;
+
+// --- 30. Bodyguard Bond ---
+const BOND_NEAR_RADIUS = 600.f;     // partners within this: protected (UU, ~12 m)
+const BOND_NEAR_RESIST = 0.75f;     // damage taken multiplier while together
+const BOND_MIRROR_FRACTION = 0.5f;  // share of damage mirrored to a distant partner
+var array<KFPlayerController> BondPCs;
+var array<int> BondPartner;         // index into BondPCs; parallel to BondPCs
+var bool bBondMirroring;            // recursion guard for the mirrored TakeDamage
+
+// --- 31. Bounty Board ---
+const BOUNTY_REWARD_DOSH = 400;     // per player, only if EVERY quota completes
+var array<KFPlayerController> BountyPCs;
+var array<byte> BountyCat;
+var array<int> BountyNeed;
+var array<int> BountyHave;
+
+// --- 32. Golden Zed Relay ---
+const GOLDEN_INTERVAL = 20.f;       // time between golden picks (s)
+const GOLDEN_SCALE = 1.4f;          // body scale multiplier
+const GOLDEN_SPEED = 1.25f;         // speed multiplier
+const GOLDEN_DROP_WINDOW = 10.f;    // trophy lifetime on the ground (s)
+const GOLDEN_DROP_RADIUS = 200.f;   // pickup touch range (UU)
+const GOLDEN_TEAM_DOSH = 100;       // paid to EVERY player per banked trophy
+var KFPawn_Monster GoldenZed;
+var PlayerReplicationInfo GoldenKillerPRI;
+var vector GoldenDropLoc;
+var float GoldenDropExpire;
 
 // ===================================================================
 // EVENT START / STOP
@@ -190,6 +252,12 @@ function StartEvent(byte EventID)
 		case 24: StartJitterbug(); break;
 		case 25: StartCostumeParty(); break;
 		case 26: StartDontBlink(); break;
+		case 27: StartPassTheBomb(); break;
+		case 28: StartRedLightGreenLight(); break;
+		case 29: StartFloorIsLava(); break;
+		case 30: StartBodyguardBond(); break;
+		case 31: StartBountyBoard(); break;
+		case 32: StartGoldenZedRelay(); break;
 	}
 
 	`log("[DK_EVENTWAVE_MGR] Started event:" @ class'ZTConfig_EventWave'.static.GetEventName(EventID));
@@ -211,6 +279,7 @@ function EndEvent()
 		case 22: EndDuel(); break;
 		case 23: EndXMen(); break;
 		case 26: EndDontBlink(); break;
+		case 31: EndBountyBoard(); break;
 	}
 
 	ClearTimer('SwapTargetTimer');
@@ -221,6 +290,16 @@ function EndEvent()
 	ClearTimer('ApplyRAGEModifiers');
 	ClearTimer('EnforceXMenPawnMods');
 	ClearTimer('UpdateDontBlink');
+	ClearTimer('BombTick');
+	ClearTimer('RLGLWarn');
+	ClearTimer('RLGLRed');
+	ClearTimer('RLGLGreen');
+	ClearTimer('RLGLRedTick');
+	ClearTimer('LavaTelegraph');
+	ClearTimer('LavaRelocate');
+	ClearTimer('LavaTick');
+	ClearTimer('PickGoldenZed');
+	ClearTimer('GoldenTick');
 
 	TargetPC = None;
 	TargetPRI = None;
@@ -232,8 +311,22 @@ function EndEvent()
 	bNemesisSpawned = False;
 	DuelPlayers.Length = 0;
 	DBZeds.Length = 0;
+	BombPassCount = 0;
+	BombPrevHolder = None;
+	LavaAnchors.Length = 0;
+	BondPCs.Length = 0;
+	BondPartner.Length = 0;
+	bBondMirroring = False;
+	BountyPCs.Length = 0;
+	BountyCat.Length = 0;
+	BountyNeed.Length = 0;
+	BountyHave.Length = 0;
+	GoldenZed = None;
+	GoldenKillerPRI = None;
 	ActiveEventID = 0;
 
+	ClearGRIMinigameExtras();
+	ClearAllClientMinigameData();
 	UpdateGRITarget(None);
 }
 
@@ -463,7 +556,7 @@ function TripleSpawnQueue()
 
 function OnZedSpawned(KFPawn_Monster Zed)
 {
-	// R.A.G.E.: immediately enrage — speed boost handled by EnforceRAGESpeed timer
+	// R.A.G.E.: immediately enrage ? speed boost handled by EnforceRAGESpeed timer
 	if (ActiveEventID == 13 && Zed != None)
 	{
 		Zed.SetEnraged(True);
@@ -726,7 +819,7 @@ function SwapTargetTimer()
 }
 
 // ===================================================================
-// DAMAGE MODIFICATION — Called from GameInfo.NetDamage
+// DAMAGE MODIFICATION ? Called from GameInfo.NetDamage
 // ===================================================================
 
 function int ModifyEventDamage(int Damage, Pawn Injured, Controller InstigatedBy)
@@ -744,7 +837,7 @@ function int ModifyEventDamage(int Damage, Pawn Injured, Controller InstigatedBy
 			break;
 
 		case 13:
-			// R.A.G.E. — players deal 1.5x damage to zeds
+			// R.A.G.E. ? players deal 1.5x damage to zeds
 			if (KFPawn_Monster(Injured) != None && KFPlayerController(InstigatedBy) != None)
 				return Round(float(Damage) * RAGE_PLAYER_DAMAGE_MULTIPLIER);
 			break;
@@ -762,12 +855,16 @@ function int ModifyEventDamage(int Damage, Pawn Injured, Controller InstigatedBy
 			if (KFPawn_Human(Injured) != None && InstigatedBy != None && KFPawn_Monster(InstigatedBy.Pawn) != None)
 				return Round(float(Damage) * (1.0f + DONTBLINK_DAMAGE_BONUS * GetDontBlinkIntensity(KFPawn_Monster(InstigatedBy.Pawn))));
 			break;
+
+		case 30:
+			// Bodyguard Bond: protected together, mirrored apart
+			return ApplyBondDamage(Damage, Injured);
 	}
 
 	return Damage;
 }
 
-// Amogus FF — returns damage if impostor hits teammate (normally blocked by FF)
+// Amogus FF ? returns damage if impostor hits teammate (normally blocked by FF)
 function int GetAmogusFFDamage(int OriginalDamage, Pawn Injured, Controller InstigatedBy)
 {
 	if (ActiveEventID != 14) return 0;
@@ -868,7 +965,7 @@ function byte GetZedTier(byte Cat)
 }
 
 // ===================================================================
-// 20. FOG OF WAR — Hide zeds beyond visibility range
+// 20. FOG OF WAR ? Hide zeds beyond visibility range
 // ===================================================================
 
 function StartFogOfWar()
@@ -930,7 +1027,7 @@ function EndFogOfWar()
 }
 
 // ===================================================================
-// 21. NEMESIS — One massively buffed zed, kill it for bonus dosh
+// 21. NEMESIS ? One massively buffed zed, kill it for bonus dosh
 // ===================================================================
 
 function StartNemesis()
@@ -1056,7 +1153,7 @@ function EndNemesis()
 }
 
 // ===================================================================
-// 22. DUEL — Each player assigned zed categories, can only damage theirs
+// 22. DUEL ? Each player assigned zed categories, can only damage theirs
 // ===================================================================
 
 function StartDuel()
@@ -1149,7 +1246,7 @@ function bool CanDuelDamage(Controller Attacker, Pawn Victim)
 		}
 	}
 
-	// Player not in list (joined mid-event?) — allow damage
+	// Player not in list (joined mid-event?) ? allow damage
 	return True;
 }
 
@@ -1214,7 +1311,7 @@ function ReassignDuelCategories(KFPlayerController DeadPC)
 }
 
 // ===================================================================
-// 23. TO ME, MY X-MEN — Random superpowers for each player
+// 23. TO ME, MY X-MEN ? Random superpowers for each player
 // ===================================================================
 
 function StartXMen()
@@ -1588,6 +1685,885 @@ function NotifyXMenKill(Controller Killer, Pawn KilledPawn)
 }
 
 // ===================================================================
+// MINIGAME EVENT HELPERS (batch 27-32)
+// ===================================================================
+
+function ZTGameReplicationInfo GetDKGRI()
+{
+	return ZTGameReplicationInfo(WorldInfo.GRI);
+}
+
+function SetGRIPhase(byte Phase)
+{
+	local ZTGameReplicationInfo ZTGRI;
+
+	ZTGRI = GetDKGRI();
+	if (ZTGRI != None)
+	{
+		ZTGRI.EventPhase = Phase;
+		ZTGRI.bForceNetUpdate = True;
+	}
+}
+
+function SetGRIZoneLoc(vector Loc)
+{
+	local ZTGameReplicationInfo ZTGRI;
+
+	ZTGRI = GetDKGRI();
+	if (ZTGRI != None)
+	{
+		ZTGRI.EventZoneLoc = Loc;
+		ZTGRI.bForceNetUpdate = True;
+	}
+}
+
+function ClearGRIMinigameExtras()
+{
+	local ZTGameReplicationInfo ZTGRI;
+
+	ZTGRI = GetDKGRI();
+	if (ZTGRI != None)
+	{
+		ZTGRI.EventZoneLoc = vect(0,0,0);
+		ZTGRI.EventPhase = 0;
+		ZTGRI.EventDataA = 0;
+		ZTGRI.EventDataB = 0;
+		ZTGRI.bForceNetUpdate = True;
+	}
+}
+
+function ClearAllClientMinigameData()
+{
+	local ZTPlayerController ZTPC;
+
+	foreach WorldInfo.AllControllers(class'ZTPlayerController', ZTPC)
+	{
+		ZTPC.ClientClearEventMinigameData();
+	}
+}
+
+// Plays a ZTSoundManager-registered one-shot cue to every player
+function PlayCueToAll(name CueID)
+{
+	local ZTMutator Mut;
+	local SoundCue Cue;
+	local ZTPlayerController ZTPC;
+
+	Mut = class'ZTSoundManager'.static.GetMutator(WorldInfo);
+	if (Mut == None)
+		return;
+
+	Cue = class'ZTSoundManager'.static.GetSound(Mut, CueID);
+	if (Cue == None)
+		return;
+
+	foreach WorldInfo.AllControllers(class'ZTPlayerController', ZTPC)
+	{
+		ZTPC.ClientPlayBuffSound(Cue);
+	}
+}
+
+function PlayCueToPC(name CueID, KFPlayerController KFPC)
+{
+	local ZTMutator Mut;
+	local SoundCue Cue;
+	local ZTPlayerController ZTPC;
+
+	ZTPC = ZTPlayerController(KFPC);
+	if (ZTPC == None)
+		return;
+
+	Mut = class'ZTSoundManager'.static.GetMutator(WorldInfo);
+	if (Mut == None)
+		return;
+
+	Cue = class'ZTSoundManager'.static.GetSound(Mut, CueID);
+	if (Cue != None)
+		ZTPC.ClientPlayBuffSound(Cue);
+}
+
+// Shared kill hook for the minigame events. Called from BOTH GameInfos'
+// Killed() next to the existing OITC/Nemesis/XMen notifies.
+function NotifyZedKilledGeneric(Controller Killer, Pawn KilledPawn)
+{
+	local ZTGameReplicationInfo ZTGRI;
+	local KFPlayerController KFPC;
+	local int Idx;
+
+	KFPC = KFPlayerController(Killer);
+
+	switch (ActiveEventID)
+	{
+		case 29: // Floor Is Lava: kills scored from inside the zone pay bonus dosh
+			ZTGRI = GetDKGRI();
+			if (ZTGRI != None && KFPC != None && KFPC.Pawn != None
+				&& VSize2D(KFPC.Pawn.Location - ZTGRI.EventZoneLoc) <= LAVA_RADIUS
+				&& KFPlayerReplicationInfo(KFPC.PlayerReplicationInfo) != None)
+			{
+				KFPlayerReplicationInfo(KFPC.PlayerReplicationInfo).AddDosh(LAVA_KILL_DOSH);
+			}
+			break;
+
+		case 31: // Bounty Board: count kills of the killer's assigned category
+			if (KFPC == None)
+				break;
+			Idx = BountyPCs.Find(KFPC);
+			if (Idx == INDEX_NONE || BountyHave[Idx] >= BountyNeed[Idx])
+				break;
+			if (GetZedCategory(KilledPawn) != BountyCat[Idx])
+				break;
+			++BountyHave[Idx];
+			if (ZTPlayerController(KFPC) != None)
+				ZTPlayerController(KFPC).ClientUpdateEventQuota(BountyHave[Idx]);
+			if (BountyHave[Idx] >= BountyNeed[Idx])
+			{
+				PlayCueToPC('EventBounty_Complete', KFPC);
+				class'ZTMessageManager'.static.SendImportant(KFPC, "BOUNTY COMPLETE!");
+				UpdateBountyTeamProgress();
+			}
+			break;
+
+		case 32: // Golden Zed Relay: golden died -> trophy drops, killer excluded
+			if (KilledPawn != None && KilledPawn == GoldenZed)
+			{
+				if (Killer != None)
+					GoldenKillerPRI = Killer.PlayerReplicationInfo;
+				else
+					GoldenKillerPRI = None;
+				GoldenDropLoc = KilledPawn.Location;
+				GoldenDropExpire = WorldInfo.TimeSeconds + GOLDEN_DROP_WINDOW;
+				GoldenZed = None;
+				SetGRIZoneLoc(GoldenDropLoc);
+				SetGRIPhase(2);
+				BroadcastMinigameMessage("GOLDEN ZED DOWN! A teammate (not the killer) must grab the trophy!");
+			}
+			break;
+	}
+}
+
+function BroadcastMinigameMessage(string Msg)
+{
+	local KFPlayerController KFPC;
+
+	foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+	{
+		class'ZTMessageManager'.static.SendImportant(KFPC, Msg);
+	}
+}
+
+// ===================================================================
+// 27. PASS THE BOMB
+// A live bomb on one player. Touch a teammate to hand it off; the fuse
+// shortens with every pass. Detonation hurts the holder badly and
+// splashes nearby players, then a fresh bomb re-arms on a random player.
+// ===================================================================
+
+function StartPassTheBomb()
+{
+	BombPassCount = 0;
+	BombPrevHolder = None;
+	ArmBombOn(PickRandomPlayer(), BOMB_FUSE_BASE);
+	SetTimer(0.25f, true, 'BombTick');
+}
+
+function ArmBombOn(KFPlayerController NewHolder, float Fuse)
+{
+	if (NewHolder == None)
+		return;
+
+	TargetPC = NewHolder;
+	TargetPRI = NewHolder.PlayerReplicationInfo;
+	SwapInterval = Fuse;
+	BombFuseEnd = WorldInfo.TimeSeconds + Fuse;
+	BombLockUntil = WorldInfo.TimeSeconds + BOMB_TRANSFER_LOCK;
+	UpdateGRITarget(TargetPRI);
+
+	class'ZTMessageManager'.static.SendCritical(TargetPC, "YOU HAVE THE BOMB! Touch a teammate to pass it!");
+}
+
+function BombTick()
+{
+	local KFPlayerController KFPC;
+	local KFPawn_Human HolderPawn, OtherPawn;
+
+	if (ActiveEventID != 27)
+		return;
+
+	// Holder died or left: bomb fizzles onto a new random player
+	if (TargetPC == None || TargetPC.Pawn == None || !TargetPC.Pawn.IsAliveAndWell())
+	{
+		BombPassCount = 0;
+		BombPrevHolder = None;
+		ArmBombOn(PickRandomPlayer(), BOMB_FUSE_BASE);
+		return;
+	}
+
+	// Fuse expired: detonate
+	if (WorldInfo.TimeSeconds >= BombFuseEnd)
+	{
+		ExplodeBomb();
+		return;
+	}
+
+	// Transfer scan (locked briefly after each pass so it cannot ping-pong)
+	if (WorldInfo.TimeSeconds < BombLockUntil)
+		return;
+
+	HolderPawn = KFPawn_Human(TargetPC.Pawn);
+	if (HolderPawn == None)
+		return;
+
+	foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+	{
+		if (KFPC == TargetPC || KFPC == BombPrevHolder)
+			continue;
+
+		OtherPawn = KFPawn_Human(KFPC.Pawn);
+		if (OtherPawn == None || !OtherPawn.IsAliveAndWell())
+			continue;
+
+		if (VSize(OtherPawn.Location - HolderPawn.Location) <= BOMB_TRANSFER_RADIUS)
+		{
+			TransferBomb(KFPC);
+			return;
+		}
+	}
+}
+
+function TransferBomb(KFPlayerController NewHolder)
+{
+	local float NewFuse;
+
+	++BombPassCount;
+	NewFuse = FMax(BOMB_FUSE_MIN, BOMB_FUSE_BASE - BOMB_FUSE_DECAY * float(BombPassCount));
+
+	class'ZTMessageManager'.static.SendMinor(TargetPC, "Bomb passed to" @ NewHolder.PlayerReplicationInfo.PlayerName $ "!");
+	BombPrevHolder = TargetPC;
+	ArmBombOn(NewHolder, NewFuse);
+	PlayCueToAll('EventBomb_Transfer');
+}
+
+function ExplodeBomb()
+{
+	local KFPawn_Human HolderPawn, OtherPawn;
+	local KFPlayerController KFPC;
+	local string HolderName;
+
+	HolderPawn = KFPawn_Human(TargetPC.Pawn);
+	HolderName = TargetPC.PlayerReplicationInfo.PlayerName;
+
+	if (HolderPawn != None && HolderPawn.IsAliveAndWell())
+	{
+		// 60% of max HP: brutal, never lethal from full health
+		HolderPawn.TakeDamage(Max(1, Round(float(HolderPawn.HealthMax) * 0.6f)), None, HolderPawn.Location, vect(0,0,0), class'DmgType_Fell');
+
+		// Splash: 30% to anyone standing too close
+		foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+		{
+			if (KFPC == TargetPC)
+				continue;
+			OtherPawn = KFPawn_Human(KFPC.Pawn);
+			if (OtherPawn != None && OtherPawn.IsAliveAndWell()
+				&& VSize(OtherPawn.Location - HolderPawn.Location) <= BOMB_BLAST_RADIUS)
+			{
+				OtherPawn.TakeDamage(Max(1, Round(float(OtherPawn.HealthMax) * 0.3f)), None, OtherPawn.Location, vect(0,0,0), class'DmgType_Fell');
+			}
+		}
+	}
+
+	PlayCueToAll('EventBomb_Explode');
+	BroadcastMinigameMessage("THE BOMB EXPLODED ON " $ HolderName $ "!");
+
+	// Fresh cycle on a new random holder
+	BombPassCount = 0;
+	BombPrevHolder = None;
+	ArmBombOn(PickRandomPlayer(), BOMB_FUSE_BASE);
+}
+
+// ===================================================================
+// 28. RED LIGHT, GREEN LIGHT
+// Green: play normally. A warning chirp, then RED for 4s: any player
+// who MOVES takes %HP ticks. Shooting while standing still is legal.
+// ===================================================================
+
+function StartRedLightGreenLight()
+{
+	SetGRIPhase(0);
+	SetTimer(RLGL_GREEN_MIN + FRand() * (RLGL_GREEN_MAX - RLGL_GREEN_MIN), false, 'RLGLWarn');
+}
+
+function RLGLWarn()
+{
+	if (ActiveEventID != 28)
+		return;
+	SetGRIPhase(1);
+	PlayCueToAll('EventRLGL_Warning');
+	SetTimer(RLGL_WARN_TIME, false, 'RLGLRed');
+}
+
+function RLGLRed()
+{
+	if (ActiveEventID != 28)
+		return;
+	SetGRIPhase(2);
+	PlayCueToAll('EventRLGL_Red');
+	SetTimer(0.25f, true, 'RLGLRedTick');
+	SetTimer(RLGL_RED_TIME, false, 'RLGLGreen');
+}
+
+function RLGLRedTick()
+{
+	local KFPlayerController KFPC;
+	local KFPawn_Human KFPH;
+
+	if (ActiveEventID != 28)
+		return;
+
+	foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+	{
+		KFPH = KFPawn_Human(KFPC.Pawn);
+		if (KFPH != None && KFPH.IsAliveAndWell() && VSize(KFPH.Velocity) > RLGL_MOVE_THRESHOLD)
+		{
+			KFPH.TakeDamage(Max(1, Round(float(KFPH.HealthMax) * RLGL_TICK_DMG_PCT)), None, KFPH.Location, vect(0,0,0), class'DmgType_Fell');
+		}
+	}
+}
+
+function RLGLGreen()
+{
+	if (ActiveEventID != 28)
+		return;
+	ClearTimer('RLGLRedTick');
+	SetGRIPhase(0);
+	PlayCueToAll('EventRLGL_Green');
+	SetTimer(RLGL_GREEN_MIN + FRand() * (RLGL_GREEN_MAX - RLGL_GREEN_MIN), false, 'RLGLWarn');
+}
+
+// ===================================================================
+// 29. THE FLOOR IS LAVA
+// One safe zone anchored at a PlayerStart / trader node. Outside it
+// players cook; kills scored inside pay bonus dosh. The zone telegraphs
+// then relocates on a fixed cycle - migrate together or burn.
+// ===================================================================
+
+function StartFloorIsLava()
+{
+	BuildLavaAnchors();
+	SetGRIZoneLoc(PickLavaAnchor(vect(0,0,0), true));
+	SetGRIPhase(0);
+	SetGRISwapSeconds(byte(LAVA_RELOCATE));
+	SetTimer(LAVA_RELOCATE - LAVA_TELEGRAPH, false, 'LavaTelegraph');
+	SetTimer(0.5f, true, 'LavaTick');
+}
+
+function SetGRISwapSeconds(byte Seconds)
+{
+	local ZTGameReplicationInfo ZTGRI;
+
+	ZTGRI = GetDKGRI();
+	if (ZTGRI != None)
+	{
+		ZTGRI.EventSwapInterval = Seconds;
+		ZTGRI.bForceNetUpdate = True;
+	}
+}
+
+function BuildLavaAnchors()
+{
+	local PlayerStart PS;
+	local KFTraderTrigger TT;
+
+	LavaAnchors.Length = 0;
+
+	foreach AllActors(class'PlayerStart', PS)
+		LavaAnchors.AddItem(PS.Location);
+
+	foreach AllActors(class'KFTraderTrigger', TT)
+		LavaAnchors.AddItem(TT.Location);
+
+	`log("[ZT_EVENTWAVE_MGR] Lava anchors:" @ LavaAnchors.Length);
+}
+
+// Picks an anchor. bNearPlayers: closest to the living players' centroid
+// (used for the opening zone so it never spawns across the map).
+// Otherwise: random anchor that differs from Current, preferring ones
+// within reachable range.
+function vector PickLavaAnchor(vector Current, bool bNearPlayers)
+{
+	local KFPlayerController KFPC;
+	local vector Centroid, Best;
+	local int Count, i, Tries;
+	local float Dist, BestDist;
+
+	if (LavaAnchors.Length == 0)
+	{
+		// Degenerate map: anchor on the players themselves
+		foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+		{
+			if (KFPC.Pawn != None && KFPC.Pawn.IsAliveAndWell())
+			{
+				Centroid += KFPC.Pawn.Location;
+				++Count;
+			}
+		}
+		if (Count > 0)
+			Centroid /= float(Count);
+		return Centroid;
+	}
+
+	if (bNearPlayers)
+	{
+		foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+		{
+			if (KFPC.Pawn != None && KFPC.Pawn.IsAliveAndWell())
+			{
+				Centroid += KFPC.Pawn.Location;
+				++Count;
+			}
+		}
+		if (Count > 0)
+			Centroid /= float(Count);
+
+		BestDist = 999999.f;
+		Best = LavaAnchors[0];
+		for (i = 0; i < LavaAnchors.Length; ++i)
+		{
+			Dist = VSize(LavaAnchors[i] - Centroid);
+			if (Dist < BestDist)
+			{
+				BestDist = Dist;
+				Best = LavaAnchors[i];
+			}
+		}
+		return Best;
+	}
+
+	// Random pick, prefer a different anchor within 5000 UU of the current zone
+	for (Tries = 0; Tries < 12; ++Tries)
+	{
+		Best = LavaAnchors[Rand(LavaAnchors.Length)];
+		if (VSize(Best - Current) > 200.f && VSize(Best - Current) < 5000.f)
+			return Best;
+	}
+
+	// Fallback: any different anchor
+	for (Tries = 0; Tries < 12; ++Tries)
+	{
+		Best = LavaAnchors[Rand(LavaAnchors.Length)];
+		if (VSize(Best - Current) > 200.f)
+			return Best;
+	}
+
+	return LavaAnchors[Rand(LavaAnchors.Length)];
+}
+
+function LavaTelegraph()
+{
+	local ZTGameReplicationInfo ZTGRI;
+
+	if (ActiveEventID != 29)
+		return;
+
+	ZTGRI = GetDKGRI();
+	if (ZTGRI == None)
+		return;
+
+	NextLavaLoc = PickLavaAnchor(ZTGRI.EventZoneLoc, false);
+	SetGRIPhase(1);
+	PlayCueToAll('EventLava_Move');
+	BroadcastMinigameMessage("THE ZONE IS MOVING!");
+	SetTimer(LAVA_TELEGRAPH, false, 'LavaRelocate');
+}
+
+function LavaRelocate()
+{
+	if (ActiveEventID != 29)
+		return;
+
+	SetGRIZoneLoc(NextLavaLoc);
+	SetGRIPhase(0);
+	SetTimer(LAVA_RELOCATE - LAVA_TELEGRAPH, false, 'LavaTelegraph');
+}
+
+function LavaTick()
+{
+	local ZTGameReplicationInfo ZTGRI;
+	local KFPlayerController KFPC;
+	local KFPawn_Human KFPH;
+
+	if (ActiveEventID != 29)
+		return;
+
+	ZTGRI = GetDKGRI();
+	if (ZTGRI == None)
+		return;
+
+	foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+	{
+		KFPH = KFPawn_Human(KFPC.Pawn);
+		if (KFPH != None && KFPH.IsAliveAndWell()
+			&& VSize2D(KFPH.Location - ZTGRI.EventZoneLoc) > LAVA_RADIUS)
+		{
+			KFPH.TakeDamage(Max(1, Round(float(KFPH.HealthMax) * LAVA_TICK_DMG_PCT)), None, KFPH.Location, vect(0,0,0), class'DmgType_Fell');
+		}
+	}
+}
+
+// ===================================================================
+// 30. BODYGUARD BOND
+// Players are paired at wave start. Together (<= 12 m): both take 25%
+// less damage. Apart: half of any damage you take is mirrored onto
+// your distant partner. Stay with your buddy.
+// ===================================================================
+
+function StartBodyguardBond()
+{
+	local KFPlayerController KFPC;
+	local ZTPlayerController ZTPC;
+	local int i, j, Tmp;
+	local array<int> Order;
+
+	BondPCs.Length = 0;
+	BondPartner.Length = 0;
+
+	foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+	{
+		if (KFPC.Pawn != None && KFPC.Pawn.IsAliveAndWell())
+			BondPCs.AddItem(KFPC);
+	}
+
+	if (BondPCs.Length < 2)
+		return;
+
+	// Fisher-Yates shuffle of indices, then pair sequential entries
+	Order.Length = BondPCs.Length;
+	for (i = 0; i < Order.Length; ++i)
+		Order[i] = i;
+	for (i = Order.Length - 1; i > 0; --i)
+	{
+		j = Rand(i + 1);
+		Tmp = Order[i];
+		Order[i] = Order[j];
+		Order[j] = Tmp;
+	}
+
+	BondPartner.Length = BondPCs.Length;
+	for (i = 0; i + 1 < Order.Length; i += 2)
+	{
+		BondPartner[Order[i]] = Order[i + 1];
+		BondPartner[Order[i + 1]] = Order[i];
+	}
+	// Odd player out bonds onto the first pair's first member (one-way triple)
+	if (Order.Length % 2 == 1)
+		BondPartner[Order[Order.Length - 1]] = Order[0];
+
+	for (i = 0; i < BondPCs.Length; ++i)
+	{
+		ZTPC = ZTPlayerController(BondPCs[i]);
+		if (ZTPC != None && BondPCs[BondPartner[i]] != None)
+		{
+			ZTPC.ClientSetEventPartner(BondPCs[BondPartner[i]].PlayerReplicationInfo.PlayerName);
+			class'ZTMessageManager'.static.SendImportant(ZTPC, "BONDED with" @ BondPCs[BondPartner[i]].PlayerReplicationInfo.PlayerName $ "! Stay close!");
+		}
+	}
+}
+
+// Damage shaping for Bodyguard Bond. Called from ModifyEventDamage.
+function int ApplyBondDamage(int Damage, Pawn Injured)
+{
+	local int Idx;
+	local KFPawn_Human PartnerPawn;
+	local KFPlayerController InjuredPC;
+
+	if (bBondMirroring)
+		return Damage;
+
+	if (KFPawn_Human(Injured) == None || Injured.Controller == None)
+		return Damage;
+
+	InjuredPC = KFPlayerController(Injured.Controller);
+	if (InjuredPC == None)
+		return Damage;
+
+	Idx = BondPCs.Find(InjuredPC);
+	if (Idx == INDEX_NONE || BondPCs[BondPartner[Idx]] == None)
+		return Damage;
+
+	PartnerPawn = KFPawn_Human(BondPCs[BondPartner[Idx]].Pawn);
+	if (PartnerPawn == None || !PartnerPawn.IsAliveAndWell())
+		return Damage;
+
+	if (VSize(Injured.Location - PartnerPawn.Location) <= BOND_NEAR_RADIUS)
+	{
+		// Together: both protected
+		return Max(1, Round(float(Damage) * BOND_NEAR_RESIST));
+	}
+
+	// Apart: distant partner feels your pain
+	if (Damage > 1)
+	{
+		bBondMirroring = True;
+		PartnerPawn.TakeDamage(Max(1, Round(float(Damage) * BOND_MIRROR_FRACTION)), None, PartnerPawn.Location, vect(0,0,0), class'DmgType_Fell');
+		bBondMirroring = False;
+	}
+
+	return Damage;
+}
+
+// ===================================================================
+// 31. BOUNTY BOARD
+// Every player gets a personal zed-category quota. If EVERY quota
+// completes before the wave ends, the whole team gets a dosh payout.
+// One straggler voids it - call out your targets.
+// ===================================================================
+
+function StartBountyBoard()
+{
+	local KFPlayerController KFPC;
+	local ZTPlayerController ZTPC;
+	local ZTGameReplicationInfo ZTGRI;
+	local byte Cat;
+	local int Need;
+
+	BountyPCs.Length = 0;
+	BountyCat.Length = 0;
+	BountyNeed.Length = 0;
+	BountyHave.Length = 0;
+
+	foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+	{
+		if (KFPC.Pawn == None || !KFPC.Pawn.IsAliveAndWell())
+			continue;
+
+		Cat = byte(Rand(7)); // ZCAT_CLOT .. ZCAT_SIREN
+		Need = GetBountyQuota(Cat);
+
+		BountyPCs.AddItem(KFPC);
+		BountyCat.AddItem(Cat);
+		BountyNeed.AddItem(Need);
+		BountyHave.AddItem(0);
+
+		ZTPC = ZTPlayerController(KFPC);
+		if (ZTPC != None)
+			ZTPC.ClientSetEventQuota(GetCategoryName(Cat), Need);
+
+		class'ZTMessageManager'.static.SendImportant(KFPC, "YOUR BOUNTY:" @ Need @ GetCategoryName(Cat) $ "!");
+	}
+
+	ZTGRI = GetDKGRI();
+	if (ZTGRI != None)
+	{
+		ZTGRI.EventDataA = 0;
+		ZTGRI.EventDataB = byte(BountyPCs.Length);
+		ZTGRI.bForceNetUpdate = True;
+	}
+}
+
+function int GetBountyQuota(byte Cat)
+{
+	switch (Cat)
+	{
+		case ZCAT_CLOT: return 12;
+		case ZCAT_CRAWLER: return 10;
+		case ZCAT_STALKER: return 8;
+		case ZCAT_GOREFAST: return 8;
+		case ZCAT_BLOAT: return 5;
+		case ZCAT_HUSK: return 5;
+		case ZCAT_SIREN: return 4;
+		default: return 8;
+	}
+}
+
+function UpdateBountyTeamProgress()
+{
+	local ZTGameReplicationInfo ZTGRI;
+	local int i, Done;
+
+	for (i = 0; i < BountyPCs.Length; ++i)
+	{
+		if (BountyHave[i] >= BountyNeed[i])
+			++Done;
+	}
+
+	ZTGRI = GetDKGRI();
+	if (ZTGRI != None)
+	{
+		ZTGRI.EventDataA = byte(Done);
+		ZTGRI.bForceNetUpdate = True;
+	}
+
+	if (Done == BountyPCs.Length && BountyPCs.Length > 0)
+		BroadcastMinigameMessage("ALL BOUNTIES COMPLETE! Payout at wave end!");
+}
+
+// Payout check. EndEvent runs when the wave ends (or trader opens), so
+// this is the natural settle-up point.
+function EndBountyBoard()
+{
+	local int i, Done;
+	local KFPlayerReplicationInfo KFPRI;
+
+	if (BountyPCs.Length == 0)
+		return;
+
+	for (i = 0; i < BountyPCs.Length; ++i)
+	{
+		if (BountyHave[i] >= BountyNeed[i])
+			++Done;
+	}
+
+	if (Done < BountyPCs.Length)
+	{
+		BroadcastMinigameMessage("Bounty Board failed:" @ Done @ "/" @ BountyPCs.Length @ "bounties completed. No payout.");
+		return;
+	}
+
+	for (i = 0; i < BountyPCs.Length; ++i)
+	{
+		if (BountyPCs[i] == None)
+			continue;
+		KFPRI = KFPlayerReplicationInfo(BountyPCs[i].PlayerReplicationInfo);
+		if (KFPRI != None)
+			KFPRI.AddDosh(BOUNTY_REWARD_DOSH);
+		class'ZTMessageManager'.static.SendCritical(BountyPCs[i], "BOUNTY BOARD COMPLETE! +" $ BOUNTY_REWARD_DOSH @ "Dosh!");
+	}
+}
+
+// ===================================================================
+// 32. GOLDEN ZED RELAY
+// A random zed turns golden every 20s. Kill it and it drops a trophy -
+// but the killer CANNOT collect it. A different player must stand on it
+// within 10s to bank a team-wide dosh payout. Forced two-person play.
+// ===================================================================
+
+function StartGoldenZedRelay()
+{
+	SetGRIPhase(0);
+	SetTimer(5.f, false, 'PickGoldenZed');
+	SetTimer(0.5f, true, 'GoldenTick');
+}
+
+function PickGoldenZed()
+{
+	local KFPawn_Monster KFPM;
+	local array<KFPawn_Monster> Candidates;
+	local ZTGameReplicationInfo ZTGRI;
+
+	if (ActiveEventID != 32)
+		return;
+
+	ZTGRI = GetDKGRI();
+
+	// One golden at a time; also pause while a trophy sits on the ground
+	if ((GoldenZed != None && GoldenZed.IsAliveAndWell()) || (ZTGRI != None && ZTGRI.EventPhase == 2))
+	{
+		SetTimer(GOLDEN_INTERVAL, false, 'PickGoldenZed');
+		return;
+	}
+
+	foreach WorldInfo.AllPawns(class'KFPawn_Monster', KFPM)
+	{
+		// Skip bosses / giants - a golden Scrake is fine, a golden Patriarch is not
+		if (KFPM.IsAliveAndWell() && KFPM.Health <= 4000 && PlayerController(KFPM.Controller) == None)
+			Candidates.AddItem(KFPM);
+	}
+
+	if (Candidates.Length == 0)
+	{
+		SetTimer(5.f, false, 'PickGoldenZed');
+		return;
+	}
+
+	GoldenZed = Candidates[Rand(Candidates.Length)];
+
+	// Gold treatment: bigger + faster (Costume Party / Jitterbug tech)
+	GoldenZed.IntendedBodyScale = GoldenZed.IntendedBodyScale * GOLDEN_SCALE;
+	GoldenZed.UpdateBodyScale(GoldenZed.IntendedBodyScale);
+	GoldenZed.GroundSpeed = GoldenZed.NormalGroundSpeed * GOLDEN_SPEED;
+	GoldenZed.SprintSpeed = GoldenZed.NormalSprintSpeed * GOLDEN_SPEED;
+
+	SetGRIZoneLoc(GoldenZed.Location);
+	SetGRIPhase(1);
+	PlayCueToAll('EventGolden_Spawn');
+	BroadcastMinigameMessage("A GOLDEN ZED has appeared! Kill it - but the killer can't collect the trophy!");
+
+	SetTimer(GOLDEN_INTERVAL, false, 'PickGoldenZed');
+}
+
+function GoldenTick()
+{
+	local ZTGameReplicationInfo ZTGRI;
+	local KFPlayerController KFPC;
+	local KFPlayerController KFPC2;
+	local KFPawn_Human KFPH;
+	local KFPlayerReplicationInfo KFPRI;
+
+	if (ActiveEventID != 32)
+		return;
+
+	ZTGRI = GetDKGRI();
+	if (ZTGRI == None)
+		return;
+
+	// Track the living golden zed for the HUD marker
+	if (ZTGRI.EventPhase == 1)
+	{
+		if (GoldenZed != None && GoldenZed.IsAliveAndWell())
+		{
+			SetGRIZoneLoc(GoldenZed.Location);
+		}
+		else if (GoldenZed != None)
+		{
+			// Died without our kill hook seeing it (e.g. turret owner edge cases):
+			// still drop the trophy where it fell, with no killer restriction.
+			GoldenKillerPRI = None;
+			GoldenDropLoc = GoldenZed.Location;
+			GoldenDropExpire = WorldInfo.TimeSeconds + GOLDEN_DROP_WINDOW;
+			GoldenZed = None;
+			SetGRIZoneLoc(GoldenDropLoc);
+			SetGRIPhase(2);
+		}
+		return;
+	}
+
+	// Trophy on the ground: expire or collect
+	if (ZTGRI.EventPhase == 2)
+	{
+		if (WorldInfo.TimeSeconds > GoldenDropExpire)
+		{
+			SetGRIPhase(0);
+			BroadcastMinigameMessage("The golden trophy crumbled away...");
+			return;
+		}
+
+		foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+		{
+			if (KFPC.PlayerReplicationInfo == GoldenKillerPRI)
+				continue;
+
+			KFPH = KFPawn_Human(KFPC.Pawn);
+			if (KFPH == None || !KFPH.IsAliveAndWell())
+				continue;
+
+			if (VSize(KFPH.Location - GoldenDropLoc) <= GOLDEN_DROP_RADIUS)
+			{
+				// Banked! Team-wide payout
+				foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC2)
+				{
+					KFPRI = KFPlayerReplicationInfo(KFPC2.PlayerReplicationInfo);
+					if (KFPRI != None && !KFPRI.bOnlySpectator)
+						KFPRI.AddDosh(GOLDEN_TEAM_DOSH);
+				}
+				PlayCueToAll('EventGolden_Collected');
+				BroadcastMinigameMessage("TROPHY BANKED by " $ KFPH.PlayerReplicationInfo.PlayerName $ "! +" $ GOLDEN_TEAM_DOSH @ "Dosh for everyone!");
+				SetGRIPhase(0);
+				return;
+			}
+		}
+	}
+}
+
+// ===================================================================
 // EVENT WAVE MUSIC SYSTEM
 // ===================================================================
 
@@ -1617,6 +2593,12 @@ function LoadEventMusic()
 	EventMusic_Jitterbug = SoundCue(DynamicLoadObject("ZedternalRBPerkpackage_Resources.Sounds.EventMusic_Jitterbug_Cue", class'SoundCue', True));
 	EventMusic_CostumeParty = SoundCue(DynamicLoadObject("ZedternalRBPerkpackage_Resources.Sounds.EventMusic_CostumeParty_Cue", class'SoundCue', True));
 	EventMusic_DontBlink = SoundCue(DynamicLoadObject("ZedternalRBPerkpackage_Resources.Sounds.EventMusic_DontBlink_Cue", class'SoundCue', True));
+	EventMusic_PassTheBomb = SoundCue(DynamicLoadObject("ZedternalRBPerkpackage_Resources.Sounds.EventMusic_PassTheBomb_Cue", class'SoundCue', True));
+	EventMusic_RedLightGreenLight = SoundCue(DynamicLoadObject("ZedternalRBPerkpackage_Resources.Sounds.EventMusic_RedLightGreenLight_Cue", class'SoundCue', True));
+	EventMusic_FloorIsLava = SoundCue(DynamicLoadObject("ZedternalRBPerkpackage_Resources.Sounds.EventMusic_FloorIsLava_Cue", class'SoundCue', True));
+	EventMusic_BodyguardBond = SoundCue(DynamicLoadObject("ZedternalRBPerkpackage_Resources.Sounds.EventMusic_BodyguardBond_Cue", class'SoundCue', True));
+	EventMusic_BountyBoard = SoundCue(DynamicLoadObject("ZedternalRBPerkpackage_Resources.Sounds.EventMusic_BountyBoard_Cue", class'SoundCue', True));
+	EventMusic_GoldenZedRelay = SoundCue(DynamicLoadObject("ZedternalRBPerkpackage_Resources.Sounds.EventMusic_GoldenZedRelay_Cue", class'SoundCue', True));
 
 	bEventMusicLoaded = True;
 
@@ -1647,6 +2629,12 @@ function SoundCue GetEventMusicCue(byte EventID)
 		case 24: return EventMusic_Jitterbug;
 		case 25: return EventMusic_CostumeParty;
 		case 26: return EventMusic_DontBlink;
+		case 27: return EventMusic_PassTheBomb;
+		case 28: return EventMusic_RedLightGreenLight;
+		case 29: return EventMusic_FloorIsLava;
+		case 30: return EventMusic_BodyguardBond;
+		case 31: return EventMusic_BountyBoard;
+		case 32: return EventMusic_GoldenZedRelay;
 		default: return None;
 	}
 }
@@ -1848,8 +2836,6 @@ function bool IsZedWatched(KFPawn_Monster Zed)
 	local vector ViewLoc, ToZed;
 	local rotator ViewRot;
 	local float Dist;
-	local Actor HitActor;
-	local vector HitLoc, HitNorm;
 
 	if (Zed == None)
 		return false;
@@ -1870,12 +2856,14 @@ function bool IsZedWatched(KFPawn_Monster Zed)
 		if ((ToZed dot vector(ViewRot)) < DONTBLINK_VIEW_DOT)
 			continue;
 
-		// Inside the view cone. Optional line-of-sight check (walls).
+		// Inside the view cone. Line-of-sight check: world geometry (walls,
+		// floors, doors) breaks the gaze, so zeds you cannot actually see
+		// keep moving. FastTrace is geometry-only and cheap; it runs last so
+		// only zeds that already passed the range and cone checks pay for it.
 		if (bDontBlinkUseTrace)
 		{
-			HitActor = KFPC.Trace(HitLoc, HitNorm, Zed.Location, ViewLoc, true);
-			if (HitActor != None && HitActor != Zed)
-				continue; // view blocked
+			if (!FastTrace(Zed.Location, ViewLoc))
+				continue; // view blocked by a wall
 		}
 
 		return true; // watched by at least one player
@@ -1931,7 +2919,7 @@ defaultproperties
 
 	bEventMusicLoaded=False
 	EventMusicFadeOutDuration=3.0
-	bDontBlinkUseTrace=False
+	bDontBlinkUseTrace=True
 
 	Name="Default__ZTEventWaveManager"
 }

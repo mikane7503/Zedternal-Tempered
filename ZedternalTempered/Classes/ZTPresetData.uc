@@ -299,6 +299,11 @@ static function AddDKCorePerks()
 // =============================================================================
 static function AddDKCoreSkills()
 {
+	// DK skills granted on VANILLA perks (previously missing from presets
+	// entirely - only the hand-edited server INI had them)
+	AddSkill("ZedternalReborn.WMUpgrade_Perk_Sharpshooter", "ZedternalTempered.ZTUpgrade_Skill_EagleEye");
+	AddSkill("ZedternalReborn.WMUpgrade_Perk_Gunslinger", "ZedternalTempered.ZTUpgrade_Skill_FastHands");
+
 	// ZTUpgrade_Perk_Archangel
 	AddSkill("ZedternalTempered.ZTUpgrade_Perk_Archangel", "ZedternalTempered.ZTUpgrade_Skill_CelestialVitality");
 	AddSkill("ZedternalTempered.ZTUpgrade_Perk_Archangel", "ZedternalTempered.ZTUpgrade_Skill_DivineFortitude");

@@ -222,6 +222,15 @@ function GatherTargets()
             D = VSizeSQ(KFM.Location - StartLocation);
             if (D <= RangeSQ)
             {
+                // Line of sight: world geometry (walls, floors, closed and
+                // welded doors - KFDoorActor is bWorldGeometry) blocks the
+                // tag. Without this the dash hit zeds behind welded doors
+                // and teleported the player through them (reported bug).
+                // FastTrace is geometry-only and cheap; it runs last so only
+                // zeds that already passed the range check pay for it.
+                if (!FastTrace(KFM.Location, StartLocation))
+                    continue;
+
                 Pool.AddItem(KFM);
                 PoolDist.AddItem(D);
             }
@@ -262,7 +271,11 @@ function BlinkTick()
     {
         KFM = BlinkQueue[BlinkIndex];
         BlinkIndex++;
-        if (KFM != None && KFM.IsAliveAndWell())
+        // Skip targets that died since tagging, and targets that moved out
+        // of sight of the start point (e.g. behind a door that was welded
+        // mid-dash) - striking them would teleport the player through the
+        // blocking geometry.
+        if (KFM != None && KFM.IsAliveAndWell() && FastTrace(KFM.Location, StartLocation))
             break;
         KFM = None;
     }

@@ -81,7 +81,7 @@ var byte ForcedEventWaveID;    // Set by exec command, consumed on next wave sta
 var ZTEventWaveManager EventWaveManager;
 
 // ===================================================================
-// BULK SYNC SYSTEM — server-side trigger
+// BULK SYNC SYSTEM ? server-side trigger
 // ===================================================================
 // Mirrors ZTGameInfo_Endless.PostLogin. See that class for design notes.
 
@@ -98,6 +98,13 @@ event InitGame(string Options, out string ErrorMessage)
 
     // Swap external upgrade class paths to DK wrappers BEFORE super loads them
     class'ZTConfig_WrapperSwap'.static.SwapAll();
+
+    // Rewrite renamed DK skill paths in the ZR skill registry BEFORE super
+    // builds it (DeadEye -> EagleEye, QuickDraw -> FastHands). Idempotent:
+    // only saves when an old path was actually found, so servers self-heal
+    // on first boot of the renamed build and the pass is a no-op afterwards.
+    // MIRRORED in ZTGameInfo_Endless / ZTGameInfo_Endless_AllWeapons.
+    MigrateRenamedSkillPaths();
 
     Super.InitGame(Options, ErrorMessage);
     
@@ -195,6 +202,37 @@ event InitGame(string Options, out string ErrorMessage)
     }
 }
 
+// Rewrites SkillPath entries that still point at pre-rename DK skill
+// classes (DeadEye -> EagleEye, QuickDraw -> FastHands). Idempotent:
+// scan-and-replace, save only when something changed. Runs from InitGame
+// BEFORE Super so ZR's registry build only ever sees the new paths.
+// MIRRORED in ZTGameInfo_Endless.
+function MigrateRenamedSkillPaths()
+{
+    local int i;
+    local bool bChanged;
+
+    for (i = 0; i < class'ZedternalReborn.Config_SkillUpgrade'.default.SkillUpgrade_Upgrade.Length; ++i)
+    {
+        if (class'ZedternalReborn.Config_SkillUpgrade'.default.SkillUpgrade_Upgrade[i].SkillPath ~= "ZedternalTempered.ZTUpgrade_Skill_DeadEye")
+        {
+            class'ZedternalReborn.Config_SkillUpgrade'.default.SkillUpgrade_Upgrade[i].SkillPath = "ZedternalTempered.ZTUpgrade_Skill_EagleEye";
+            bChanged = true;
+        }
+        else if (class'ZedternalReborn.Config_SkillUpgrade'.default.SkillUpgrade_Upgrade[i].SkillPath ~= "ZedternalTempered.ZTUpgrade_Skill_QuickDraw")
+        {
+            class'ZedternalReborn.Config_SkillUpgrade'.default.SkillUpgrade_Upgrade[i].SkillPath = "ZedternalTempered.ZTUpgrade_Skill_FastHands";
+            bChanged = true;
+        }
+    }
+
+    if (bChanged)
+    {
+        class'ZedternalReborn.Config_SkillUpgrade'.static.StaticSaveConfig();
+        `log("[ZT_MIGRATE] Rewrote renamed skill paths (DeadEye->EagleEye / QuickDraw->FastHands) in Config_SkillUpgrade");
+    }
+}
+
 event PreBeginPlay()
 {
     Super.PreBeginPlay();
@@ -270,7 +308,7 @@ event PostBeginPlay()
 }
 
 // ===================================================================
-// BULK SYNC TRIGGER — PostLogin override (parallel to ZTGameInfo_Endless)
+// BULK SYNC TRIGGER ? PostLogin override (parallel to ZTGameInfo_Endless)
 // ===================================================================
 
 event PostLogin(PlayerController NewPlayer)
@@ -326,7 +364,7 @@ function ProcessPendingBulkSync()
 }
 
 // ===================================================================
-// PERK FILTER — DEFAULT RULES
+// PERK FILTER ? DEFAULT RULES
 // These define which perks require prerequisites or achievements.
 // ===================================================================
 
@@ -361,7 +399,7 @@ function InitializeDefaultPerkRules()
 }
 
 // ===================================================================
-// PERK FILTER — PLAYER JOIN (RepPlayerInfo Override)
+// PERK FILTER ? PLAYER JOIN (RepPlayerInfo Override)
 // Called when a player connects. Super handles the WM random selection,
 // then we apply filter rules to lock perks that shouldn't be visible.
 // ===================================================================
@@ -371,7 +409,7 @@ function RepPlayerInfo(WMPlayerReplicationInfo WMPRI)
     // Let WM do its standard random perk selection first
     Super.RepPlayerInfo(WMPRI);
 
-    // Apply filter rules on top — lock achievement-locked and prerequisite-gated perks
+    // Apply filter rules on top ? lock achievement-locked and prerequisite-gated perks
     if (PerkConfig != None && WMPRI != None)
     {
         ApplyPerkFilterRules(WMPRI);
@@ -417,7 +455,7 @@ function ApplyPerkFilterRules(WMPlayerReplicationInfo WMPRI)
             `log("[DK_PERKFILTER] Locked achievement perk:" @ PerkClassName @ "for" @ WMPRI.PlayerName);
         }
 
-        // Rank-gated perk check (skip if rank is 0 — rank hasn't been reported yet,
+        // Rank-gated perk check (skip if rank is 0 ? rank hasn't been reported yet,
         // will be enforced when ServerReportRank fires with the actual rank)
         if (GlobalRank > 0 || LocalRank > 0)
         {
@@ -464,7 +502,7 @@ function ApplyPerkFilterRules(WMPlayerReplicationInfo WMPRI)
 }
 
 // ===================================================================
-// PERK FILTER — TRADER-TIME DYNAMIC UNLOCK
+// PERK FILTER ? TRADER-TIME DYNAMIC UNLOCK
 // While trader is open, periodically check if prerequisites are now met
 // (e.g. player leveled Symbiote to 10, Cinder should appear).
 // ===================================================================
@@ -532,7 +570,7 @@ function ApplyPerkUnlockRules(WMPlayerReplicationInfo WMPRI, WMGameReplicationIn
     {
         PerkClassName = PerkConfig.UnlockRules[RuleIdx].PerkClassName;
 
-        // Skip achievement-locked perks — only achievements can unlock those
+        // Skip achievement-locked perks ? only achievements can unlock those
         if (PerkConfig.IsAchievementLocked(PerkClassName))
             continue;
 
@@ -563,7 +601,7 @@ function ApplyPerkUnlockRules(WMPlayerReplicationInfo WMPRI, WMGameReplicationIn
         {
             if (bWasLocked)
             {
-                // Perk just became unlockable — queue notification
+                // Perk just became unlockable ? queue notification
                 QueuePerkUnlock(WMPRI, PerkName, LockedPerkIdx, WMGRI);
             }
             else
@@ -666,7 +704,7 @@ function ShowPendingPerkUnlockNotifications()
 }
 
 // ===================================================================
-// PERK FILTER — HELPER FUNCTIONS
+// PERK FILTER ? HELPER FUNCTIONS
 // ===================================================================
 
 function int FindPerkIndex(WMGameReplicationInfo WMGRI, string ClassName)
@@ -740,11 +778,11 @@ function int FindPerkIndexByName(WMGameReplicationInfo WMGRI, string PerkName)
 }
 
 // ===================================================================
-// PERK REROLL SYSTEM — COMMAND HANDLER
+// PERK REROLL SYSTEM ? COMMAND HANDLER
 // Intercepts "mutate rerollperks" commands from players.
 // Usage:
-//   mutate rerollperks       — execute the reroll (costs dosh)
-//   mutate rerollperks cost  — show current cost without rerolling
+//   mutate rerollperks       ? execute the reroll (costs dosh)
+//   mutate rerollperks cost  ? show current cost without rerolling
 // ===================================================================
 
 function Mutate(string MutateString, PlayerController Sender)
@@ -852,7 +890,7 @@ function HandlePerkReroll(PlayerController Sender)
     {
         if (WMPRI.bPerkUpgrade[i].bUnlocked && WMPRI.bPerkUpgrade[i].level == 0)
         {
-            // Don't count static perks — they stay locked in place
+            // Don't count static perks ? they stay locked in place
             if (i < StaticPerks.Length && StaticPerks[i])
                 continue;
 
@@ -867,21 +905,21 @@ function HandlePerkReroll(PlayerController Sender)
     }
 
     // ---------------------------------------------------------------
-    // STEP 2: Build reroll pool — all unpurchased, non-static perks
+    // STEP 2: Build reroll pool ? all unpurchased, non-static perks
     // This includes perks that are currently locked AND unlocked.
     // PerkFilter rules will be applied after randomization.
     // ---------------------------------------------------------------
     for (i = 0; i < WMGRI.PerkUpgradesList.Length; ++i)
     {
-        // Skip purchased perks (level > 0) — these are kept
+        // Skip purchased perks (level > 0) ? these are kept
         if (WMPRI.bPerkUpgrade[i].level > 0)
             continue;
 
-        // Skip static perks — always available, not part of random pool
+        // Skip static perks ? always available, not part of random pool
         if (i < StaticPerks.Length && StaticPerks[i])
             continue;
 
-        // Skip achievement-locked perks — only achievements can unlock these
+        // Skip achievement-locked perks ? only achievements can unlock these
         PerkClassName = string(WMGRI.PerkUpgradesList[i].PerkUpgrade.Name);
         if (PerkConfig != None)
         {
@@ -889,7 +927,7 @@ function HandlePerkReroll(PlayerController Sender)
                 continue;
         }
 
-        // Skip rank-locked perks — player hasn't reached required rank
+        // Skip rank-locked perks ? player hasn't reached required rank
         RerollGlobalRank = 0;
         if (DKPRI != None)
             RerollGlobalRank = DKPRI.PlayerRank;
@@ -981,7 +1019,7 @@ function HandlePerkReroll(PlayerController Sender)
 }
 
 // ===================================================================
-// PERK REROLL — COST & TRACKING HELPERS
+// PERK REROLL ? COST & TRACKING HELPERS
 // ===================================================================
 
 // Calculate cost: BaseCost * (Multiplier ^ RerollCount)
@@ -1043,7 +1081,7 @@ function IncrementPlayerPerkRerollCount(PlayerController PC)
 }
 
 // ===================================================================
-// WEAPON LIST — Remove Precious, then register Reforged weapons
+// WEAPON LIST ? Remove Precious, then register Reforged weapons
 // ===================================================================
 
 function BuildWeaponList()
@@ -1075,12 +1113,12 @@ function BuildWeaponList()
 // dedicated servers where the client rebuilds its list via replication.
 //
 // What we remove from:
-//   1. AllowedWeaponsList — hides Precious from trader UI (IsItemAllowed)
-//   2. WeaponUpgradeSlotsList — frees upgrade slots for Reforged weapons
+//   1. AllowedWeaponsList ? hides Precious from trader UI (IsItemAllowed)
+//   2. WeaponUpgradeSlotsList ? frees upgrade slots for Reforged weapons
 //
 // What we keep intact:
-//   - TraderItems.SaleItems — preserves buy index parity
-//   - KFWeaponDefPath — preserves replication parity
+//   - TraderItems.SaleItems ? preserves buy index parity
+//   - KFWeaponDefPath ? preserves replication parity
 function RemovePreciousWeapons()
 {
     local int i, RemovedSlots, RemovedAllowed;
@@ -1122,10 +1160,10 @@ function RemovePreciousWeapons()
 }
 
 // Registers Reforged weapons into:
-//   1. AllowedWeaponsList — for IsItemAllowed bitmask gating
-//   2. WeaponUpgradeSlotsList — for UPG menu weapon upgrades
-//   3. TraderItems.SaleItems — for the trader UI
-//   4. KFWeaponDefPath — for client replication
+//   1. AllowedWeaponsList ? for IsItemAllowed bitmask gating
+//   2. WeaponUpgradeSlotsList ? for UPG menu weapon upgrades
+//   3. TraderItems.SaleItems ? for the trader UI
+//   4. KFWeaponDefPath ? for client replication
 // Upgrade slots are created explicitly (not via AddWeaponInTrader) for reliability.
 function RegisterReforgedWeapons()
 {
@@ -1182,7 +1220,7 @@ function RegisterReforgedWeapons()
         WMGRI.AddAllowedWeapon(WD, BuyPrice);
         WeaponSlotsBefore = WMGRI.WeaponUpgradeSlotsList.Length;
 
-        // 2. Weapon Upgrade Slots — explicit creation
+        // 2. Weapon Upgrade Slots ? explicit creation
         // DK OPTION2: same gating + recording as AddWeaponInTrader.
         if (KFW != None
             && WMGRI.AllowedWeaponsList.Length <= DK_MAX_TRADER_WEAPONS
@@ -1296,12 +1334,12 @@ function RegisterReforgedWeapons()
         // including zero-slot weapons.
         DKGRI.ServerWeaponSlotCntRecord.AddItem(byte(WMGRI.WeaponUpgradeSlotsList.Length - WeaponSlotsBefore));
 
-        // 3. TraderItems.SaleItems — for trader UI
+        // 3. TraderItems.SaleItems ? for trader UI
         NewWeapon.WeaponDef = WD;
         NewWeapon.ItemID = IDCount;
         TraderItems.SaleItems.AddItem(NewWeapon);
 
-        // 4. KFWeaponDefPath — for client replication
+        // 4. KFWeaponDefPath ? for client replication
         KFWeaponDefPath.AddItem(PathName(WD));
 
         ++IDCount;
@@ -1369,7 +1407,7 @@ function RegisterHollowWeapons()
 }
 
 // ===================================================================
-// OMEN PERK — ZEDBUFF REGISTRATION
+// OMEN PERK ? ZEDBUFF REGISTRATION
 // Injects 5 Omen doom ZedBuff classes into ConfigData.ZedBuffObjects
 // so they replicate to clients. MinWave=9999 prevents random activation;
 // only the Omen helper triggers them manually.
@@ -1762,7 +1800,7 @@ function OpenTrader()
 
     // Only schedule trader refresh on listen servers when no local player exists yet
     // (e.g. ?wave=N startup). On dedicated servers GetALocalPlayerController() is
-    // always None, so we must NOT run this path — it was causing trader pod rotation.
+    // always None, so we must NOT run this path ? it was causing trader pod rotation.
     // NOTE: IsConsoleDedicatedServer() only returns True on Xbox/PS4. Use NetMode check.
     if (WorldInfo.NetMode != NM_DedicatedServer && GetALocalPlayerController() == None)
     {
@@ -1826,7 +1864,7 @@ function CheckAndRefreshTrader()
         return;
     }
 
-    // Player exists — refresh the trader trigger
+    // Player exists ? refresh the trader trigger
     OpenedTrigger = MyKFGRI.OpenedTrader;
     if (OpenedTrigger == None || !MyKFGRI.bTraderIsOpen)
     {
@@ -1836,7 +1874,7 @@ function CheckAndRefreshTrader()
 
     `log("[DK_DEBUG] CheckAndRefreshTrader: Player found (" $ KFPC $ "), refreshing SAME trader");
 
-    // Close and reopen the SAME trader — do NOT call SetupNextTrader()
+    // Close and reopen the SAME trader ? do NOT call SetupNextTrader()
     MyKFGRI.CloseTrader();
     MyKFGRI.NextTrader = OpenedTrigger;
     MyKFGRI.OpenTrader(TimeBetweenWaves);
@@ -1896,7 +1934,7 @@ function SetupSpecialWave()
 }
 
 // ===================================================================
-// EXTENDED LIMITS — RepGameInfoHighPriority Override
+// EXTENDED LIMITS ? RepGameInfoHighPriority Override
 // Raises NumberOf caps from parent (512/MAXWEAPONUPGRADES) to 1024/8192
 // ===================================================================
 
@@ -1915,7 +1953,7 @@ function RepGameInfoHighPriority()
     }
     SavedTraderWeapons = TraderItems.SaleItems.Length;
 
-    // Parent runs — sets NumberOf* and truncates arrays to old caps
+    // Parent runs ? sets NumberOf* and truncates arrays to old caps
     super.RepGameInfoHighPriority();
 
     if (WMGRI == None)
@@ -1947,7 +1985,7 @@ function RepGameInfoHighPriority()
 }
 
 // ===================================================================
-// EXTENDED LIMITS — RepGameInfoLowPriority Override
+// EXTENDED LIMITS ? RepGameInfoLowPriority Override
 // Populates C/D replication arrays for trader weapons 512-1023
 // ===================================================================
 
@@ -1998,17 +2036,17 @@ function RepGameInfoLowPriority()
     // arrays and compute the arrival checksum. Idempotent.
     DKGRI.FinalizeSlotData();
 
-    `log("DK Extended Limits (AllWeapons): Populated rep arrays — AllowedWeapons:" @ DKGRI.AllowedWeaponsList.Length
+    `log("DK Extended Limits (AllWeapons): Populated rep arrays ? AllowedWeapons:" @ DKGRI.AllowedWeaponsList.Length
         @ "KFWeaponDefPath:" @ KFWeaponDefPath.Length);
 }
 
 // ===================================================================
-// EXTENDED LIMITS — AddWeaponInTrader Override
+// EXTENDED LIMITS ? AddWeaponInTrader Override
 // Replaces parent's MAXWEAPONUPGRADES guard (4096) with 8192
 // ===================================================================
 
 // ===================================================================
-// OPTION 2 — SLOT BUDGET (AllWeapons mode)
+// OPTION 2 ? SLOT BUDGET (AllWeapons mode)
 // In AllWeapons mode every registered weapon gets trader+upgrade slots
 // up front, so the total weapon count is known BEFORE slot assignment.
 // If weapons x NumberUpgradePerWeapon exceeds the global cap, clamp the
@@ -2237,7 +2275,7 @@ function SpawnBalanceRepHelper()
         class'ZTWrapper_Skill_Steady'.static.PopulateHelper(H);
         class'ZTWrapper_Skill_Tactician'.static.PopulateHelper(H);
         class'ZTWrapper_Skill_WhirlwindOfLead'.static.PopulateHelper(H);
-        // Weapon wrapper PopulateHelper calls REMOVED — wrapper .uc files
+        // Weapon wrapper PopulateHelper calls REMOVED ? wrapper .uc files
         // do not exist on disk; references caused unresolved class compile
         // errors. Weapon balance values now use ZR's hardcoded defaults.
 
@@ -2287,7 +2325,7 @@ function BroadcastEventWaveSound(byte EventID)
 }
 
 // ===================================================================
-// DAMAGE MODIFICATION — Event Wave overrides
+// DAMAGE MODIFICATION ? Event Wave overrides
 // ===================================================================
 
 function ReduceDamage(out int Damage, Pawn Injured, Controller InstigatedBy, vector HitLocation, out vector Momentum, class<DamageType> DamageType, Actor DamageCauser, TraceHitInfo HitInfo)
@@ -2298,10 +2336,53 @@ function ReduceDamage(out int Damage, Pawn Injured, Controller InstigatedBy, vec
     local ZTPlayerController PuppetHumanPC;
     local ZTPlayerController PossessorDealerPC;
     local ZTUpgrade_Perk_Possessor_Helper PossessorDmgHelper;
+    local ZTFastball_PayloadMarker FastballMarker;
+    local ZTWish_Buff WishBuff;
 
     PreSuperDamage = Damage;
 
     Super.ReduceDamage(Damage, Injured, InstigatedBy, HitLocation, Momentum, DamageType, DamageCauser, HitInfo);
+
+    // FASTBALL: a launched teammate takes no falling damage for the
+    // duration of the flight (marker present). MIRRORED in
+    // ZTGameInfo_Endless / ZTGameInfo_Endless_AllWeapons.
+    if (Damage > 0 && ClassIsChildOf(DamageType, class'KFDT_Falling') && KFPawn_Human(Injured) != None)
+    {
+        foreach Injured.ChildActors(class'ZTFastball_PayloadMarker', FastballMarker)
+        {
+            Damage = 0;
+            break;
+        }
+    }
+
+    // WISHMASTER: consume Guardian Angel / corrupted first-hit charges on
+    // the victim's ZTWish_Buff carrier. MIRRORED in
+    // ZTGameInfo_Endless / ZTGameInfo_Endless_AllWeapons.
+    if (Damage > 0 && KFPawn_Human(Injured) != None)
+    {
+        foreach Injured.ChildActors(class'ZTWish_Buff', WishBuff)
+        {
+            // Corrupted Guardian: the next hit taken is doubled.
+            if (WishBuff.CurseFirstHit > 0)
+            {
+                Damage *= 2;
+                WishBuff.CurseFirstHit = 0;
+            }
+
+            // Guardian Angel: survive the next lethal hit at 1 HP.
+            if (WishBuff.GuardianCharge > 0 && Damage >= Injured.Health)
+            {
+                Damage = Max(0, Injured.Health - 1);
+                WishBuff.GuardianCharge = 0;
+
+                if (KFPlayerController(Injured.Controller) != None)
+                    class'ZTMessageManager'.static.SendMinor(KFPlayerController(Injured.Controller), "GUARDIAN ANGEL! You cheat death at 1 HP.");
+            }
+
+            WishBuff.MaybeSelfDestruct();
+            break;
+        }
+    }
 
     if (EventWaveManager != None && EventWaveManager.ActiveEventID > 0)
     {
@@ -2405,6 +2486,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
             EventWaveManager.NotifyZedKilledOITC(Killer);
             EventWaveManager.NotifyNemesisKilled(KilledPawn);
             EventWaveManager.NotifyXMenKill(Killer, KilledPawn);
+            EventWaveManager.NotifyZedKilledGeneric(Killer, KilledPawn);
         }
     }
 
@@ -2478,7 +2560,7 @@ function WaveEnded(EWaveEndCondition WinCondition)
 }
 
 // ===================================================================
-// MAP COOLDOWN SYSTEM — Filter recently played maps from vote and rotation
+// MAP COOLDOWN SYSTEM ? Filter recently played maps from vote and rotation
 // ===================================================================
 
 function SendMapOptionsAndOpenAARMenu()

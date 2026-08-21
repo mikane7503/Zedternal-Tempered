@@ -104,10 +104,13 @@ function SetTier(int InTier)
 {
 	Tier = Clamp(InTier, 1, 2);
 	
+	// Duration is config-driven:
+	// [ZedternalTempered.ZTUpgrade_Skill_Chronoshift] ZedTimeDurations
+	// (index 0 = standard, 1 = deluxe)
 	if (Tier == 1)
-		ZedTimeDuration = 5.0f;
+		ZedTimeDuration = class'ZTUpgrade_Skill_Chronoshift'.default.ZedTimeDurations[0];
 	else
-		ZedTimeDuration = 8.0f;
+		ZedTimeDuration = class'ZTUpgrade_Skill_Chronoshift'.default.ZedTimeDurations[1];
 	
 	`log("Chronoshift_Helper: Tier" @ Tier @ "- ZED time duration:" @ ZedTimeDuration);
 }

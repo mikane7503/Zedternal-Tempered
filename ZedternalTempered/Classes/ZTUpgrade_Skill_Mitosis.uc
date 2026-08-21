@@ -36,12 +36,19 @@ static function AddVampireHealth(out int InHealth, int DefaultHealth, int upgLev
 {
 	local ZTUpgrade_Skill_Mitosis_Helper UPG;
 
-	if (KFPC == None || KFPC.Pawn == None)
+	if (KFPC == None || KFPC.Pawn == None || upgLevel < 1)
 		return;
 
 	UPG = GetHelper(KFPC.Pawn, upgLevel);
 	if (UPG != None)
+	{
+		// Refresh every call so a mid-game deluxe purchase applies instantly
+		UPG.bDeluxe = (upgLevel > 1);
+		if (upgLevel - 1 < default.KillThreshold.Length)
+			UPG.KillThreshold = default.KillThreshold[upgLevel - 1];
+
 		UPG.OnKill();
+	}
 }
 
 static function ZTUpgrade_Skill_Mitosis_Helper GetHelper(Pawn OwnerPawn, int upgLevel)
@@ -57,8 +64,6 @@ static function ZTUpgrade_Skill_Mitosis_Helper GetHelper(Pawn OwnerPawn, int upg
 
 		// Should have one - spawn it
 		UPG = OwnerPawn.Spawn(class'ZTUpgrade_Skill_Mitosis_Helper', OwnerPawn);
-		UPG.bDeluxe = (upgLevel > 1);
-		UPG.KillThreshold = default.KillThreshold[upgLevel - 1];
 	}
 
 	return UPG;
