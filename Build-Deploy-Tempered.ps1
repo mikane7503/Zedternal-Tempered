@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$SkipDeploy
 )
 
 $ErrorActionPreference = 'Stop'
@@ -99,6 +100,11 @@ if (-not $SkipBuild) {
     if (-not (Select-String -LiteralPath $LatestBuildLog.FullName -SimpleMatch 'Success - 0 error(s)' -Quiet)) {
         throw "KFEditor did not report a successful zero-error build: $($LatestBuildLog.FullName)"
     }
+}
+
+if ($SkipDeploy) {
+    Write-Host '[DONE    ] Tempered build validation completed; deployment was skipped.'
+    return
 }
 
 # A running server may keep the old package loaded until its next restart.
