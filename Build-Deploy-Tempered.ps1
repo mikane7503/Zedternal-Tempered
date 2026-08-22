@@ -13,6 +13,8 @@ $SdkSourceRoot = 'C:\Users\yss19\Documents\My Games\KillingFloor2\KFGame\Src'
 $SdkSource = Join-Path $SdkSourceRoot 'ZedternalTempered'
 $EditorExe = Join-Path $GameRoot 'Binaries\Win64\KFEditor.exe'
 $BuiltScript = 'C:\Users\yss19\Documents\My Games\KillingFloor2\KFGame\Unpublished\BrewedPC\Script\ZedternalTempered.u'
+$SdkUnpublishedBrewed = 'C:\Users\yss19\Documents\My Games\KillingFloor2\KFGame\Unpublished\BrewedPC'
+$GameBrewed = Join-Path $GameRoot 'KFGame\BrewedPC'
 
 $ServerBrewed = 'D:\KF2server\KFGame\BrewedPC'
 $Redirect = 'D:\KF2server\redirect'
@@ -23,6 +25,13 @@ $ClientMenuCacheRoots = @(
 )
 $ServerConfig = 'D:\KF2server\KFGame\Config\SV_Zedternal_Tempered'
 $ResourceRoot = 'C:\Users\yss19\Documents\Projects\Zedternal Unlimited Rebalance\source'
+$ResourcePackages = @(
+    'ZedternalRBPerkpackage_Resources.upk',
+    'ZedternalRBPerkpackage_Menus.upk',
+    'ZedternalReborn_Resource.upk',
+    'ZedternalReborn_Menus.upk',
+    'ZedternalReborn_Zeds.upk'
+)
 
 function Assert-Directory([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
@@ -76,6 +85,16 @@ if (-not $SkipBuild) {
         throw "Source staging failed with robocopy exit code $LASTEXITCODE"
     }
 
+    # Make every referenced resource available to the compiler. This is
+    # required when Unlimited adds new icons: compiling against an older UPK
+    # permanently serializes None into UpgradeIcon even if the server later
+    # receives the newer resource package.
+    foreach ($PackageName in $ResourcePackages) {
+        $SourcePackage = Join-Path $ResourceRoot $PackageName
+        Copy-IfChanged $SourcePackage $SdkUnpublishedBrewed
+        Copy-IfChanged $SourcePackage $GameBrewed
+    }
+
     $BuildStarted = Get-Date
     Write-Host '[BUILD   ] KFEditor make -full'
     $Process = Start-Process -FilePath $EditorExe -ArgumentList @('make', '-full', '-unattended', '-nopause') -WorkingDirectory (Split-Path $EditorExe) -Wait -PassThru
@@ -118,13 +137,6 @@ Copy-IfChanged $BuiltScript $ServerBrewed
 Copy-IfChanged $BuiltScript $Redirect
 
 # Tempered perk artwork and the Reborn packages it references.
-$ResourcePackages = @(
-    'ZedternalRBPerkpackage_Resources.upk',
-    'ZedternalRBPerkpackage_Menus.upk',
-    'ZedternalReborn_Resource.upk',
-    'ZedternalReborn_Menus.upk',
-    'ZedternalReborn_Zeds.upk'
-)
 foreach ($PackageName in $ResourcePackages) {
     $SourcePackage = Join-Path $ResourceRoot $PackageName
     Copy-IfChanged $SourcePackage $ServerBrewed
@@ -134,7 +146,6 @@ foreach ($PackageName in $ResourcePackages) {
 # Keep the SDK/client copies on the unmodified Reborn menu package. This is a
 # stock-resource deployment, not a generated Tempered UI fork.
 $OriginalMenuPackage = Join-Path $ResourceRoot 'ZedternalReborn_Menus.upk'
-$SdkUnpublishedBrewed = 'C:\Users\yss19\Documents\My Games\KillingFloor2\KFGame\Unpublished\BrewedPC'
 Copy-IfChanged $OriginalMenuPackage $SdkUnpublishedBrewed
 foreach ($CacheRoot in $ClientMenuCacheRoots) {
     if (-not (Test-Path -LiteralPath $CacheRoot -PathType Container)) { continue }
